@@ -1,5 +1,4 @@
 import * as fsSync from 'fs'
-import * as fs from 'fs/promises'
 import * as path from 'path'
 import core from '@actions/core';
 import * as os from 'os';
@@ -9,6 +8,8 @@ import { URL } from 'url';
 import fetch, { HeadersInit } from 'node-fetch';
 import { Inputs } from '../Inputs';
 import btoa from 'btoa';
+
+const fs = fsSync.promises;
 
 interface FileSpec {
     absolutePath: string,
