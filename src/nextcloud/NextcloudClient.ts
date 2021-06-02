@@ -153,10 +153,11 @@ export class NextcloudClient {
         
         const remoteFilePath = path.join(remoteFileDir, `${this.artifact}.zip`);
         const stream = fsSync.createReadStream(file);
-        await this.davClient.putFileContents(remoteFilePath, stream, {
+        const res = await this.davClient.putFileContents(remoteFilePath, stream, {
             onUploadProgress: p => core.debug(`Progress: ${p.loaded}/${p.total}`),
         });
 
+        core.debug(`Upload status: ${res}`);
         return remoteFilePath;
     }
 
