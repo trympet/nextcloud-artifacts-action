@@ -15,7 +15,7 @@ export class Inputs {
     }
 
     static get Endpoint(): string {
-        return core.getInput("retention-days");
+        return core.getInput("nextcloud-url");
     }
 
     static get NoFileBehvaior(): NoFileOption {
