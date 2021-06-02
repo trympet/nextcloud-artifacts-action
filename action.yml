@@ -1,6 +1,6 @@
-name: 'Upload a Build Artifact'
-description: 'Upload a build artifact that can be used by subsequent workflow steps'
-author: 'GitHub'
+name: 'Upload a Build Artifact to Nextcloud'
+description: 'Upload a build artifact to Nextcloud that can be used by subsequent workflow steps'
+author: 'Trym Lund Flogard'
 inputs: 
   name:
     description: 'Artifact name'
