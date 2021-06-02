@@ -106,9 +106,15 @@ export class NextcloudClient {
         const tempArtifactDir = path.join(os.tmpdir(), this.guid);
         const artifactPath = path.join(tempArtifactDir, `artifact-${this.artifact}`);
         await fs.mkdir(path.join(artifactPath, this.artifact), { recursive: true });
+        const copies = [];
         for (let spec of specs) {
-            await fs.copyFile(spec.absolutePath, path.join(artifactPath, spec.uploadPath));
+            const dstpath = path.join(artifactPath, spec.uploadPath);
+            const promise = fs.mkdir(path.dirname(dstpath))
+                .then(() => fs.copyFile(spec.absolutePath, dstpath))
+            copies.push(promise);
         }
+
+        await Promise.all(copies);
 
         const archivePath = path.join(artifactPath, `${this.artifact}.zip`);
         await this.zip(path.join(artifactPath, this.artifact), archivePath);
