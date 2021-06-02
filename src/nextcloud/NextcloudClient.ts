@@ -166,7 +166,7 @@ export class NextcloudClient {
         const stream = fsSync.createReadStream(file)
             .pipe(this.davClient.createWriteStream(remoteFilePath));
 
-        return await new Promise<string>((resolve, reject) => {
+        return new Promise<string>((resolve, reject) => {
             stream.on('error', () => reject("Failed to upload file"))
                 .on('close', () => resolve(remoteFilePath));
         });
