@@ -2,12 +2,12 @@ import * as fsSync from 'fs'
 import * as path from 'path'
 import * as core from '@actions/core';
 import * as os from 'os';
-import * as crypto from 'crypto';
 import * as archiver from 'archiver';
 import { URL } from 'url';
 import fetch, { HeadersInit } from 'node-fetch';
 import { Inputs } from '../Inputs';
 import btoa from 'btoa';
+import { v4 as uuidv4 } from 'uuid';
 
 const fs = fsSync.promises;
 
@@ -24,7 +24,7 @@ export class NextcloudClient {
         private endpoint: string,
         private artifact: string,
         private rootDirectory: string) {
-            this.guid = crypto.randomUUID({ disableEntropyCache: false });
+            this.guid = uuidv4();
             this.headers = {'Authorization': 'Basic ' + btoa(`${Inputs.Username}:${Inputs.Password}`)};
     }
 
