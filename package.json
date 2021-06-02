@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/trympet/nextcloud-artifacts-action/issues"
   },
-  "homepage": "https://github.com/trympet/nextcloud-artifacts-action#readme"
+  "homepage": "https://github.com/trympet/nextcloud-artifacts-action#readme",
+  "dependencies": {
+    "@actions/core": "^1.3.0"
+  }
 }
