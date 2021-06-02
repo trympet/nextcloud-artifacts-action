@@ -2,7 +2,7 @@
   "name": "nextcloud-artifacts-action",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "lib/nextcloud-artifacts.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npx tsc && npx @vercel/ncc build"
