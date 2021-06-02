@@ -24,7 +24,7 @@ export class NextcloudClient {
         private endpoint: string,
         private artifact: string,
         private rootDirectory: string) {
-            this.guid = crypto.randomUUID();
+            this.guid = crypto.randomUUID({ disableEntropyCache: false });
             this.headers = {'Authorization': 'Basic ' + btoa(`${Inputs.Username}:${Inputs.Password}`)};
     }
 
