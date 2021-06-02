@@ -31,12 +31,12 @@ export class NextcloudClient {
         this.headers = { 'Authorization': 'Basic ' + btoa(`${Inputs.Username}:${Inputs.Password}`) };
         this.davClient = webdav.createClient(`${this.endpoint}/remote.php/dav`, {
             username: Inputs.Username,
-            password: Inputs.Password
+            password: Inputs.Password,
         });
     }
 
     public async uploadFiles(files: string[]) {
-        core.info("Begin uploading files...");
+        core.info("Preparing upload...");
         const spec = this.uploadSpec(files);
         core.info("Zipping files...");
         var zip = await this.zipFiles(spec);
@@ -150,17 +150,18 @@ export class NextcloudClient {
 
     private async upload(file: string) {
         const remoteFileDir = `/artifacts/${this.guid}`;
+        core.info("Creating directory...");
         if (!(await this.davClient.exists(remoteFileDir))) {
             await this.davClient.createDirectory(remoteFileDir, { recursive: true });
         }
         
         const remoteFilePath = path.join(remoteFileDir, `${this.artifact}.zip`);
-        const stream = fsSync.createReadStream(file);
-        const res = await this.davClient.putFileContents(remoteFilePath, stream, {
-            onUploadProgress: p => core.debug(`Progress: ${p.loaded}/${p.total}`),
-        });
+        core.info("Transferring file...");
+        fsSync.createReadStream(file)
+            .pipe(this.davClient.createWriteStream(remoteFilePath))
+            .on('error', () => core.setFailed("Failed to upload file"))
+            .on('finish', () => core.info("File upload finished"));
 
-        core.debug(`Upload status: ${res}`);
         return remoteFilePath;
     }
 
