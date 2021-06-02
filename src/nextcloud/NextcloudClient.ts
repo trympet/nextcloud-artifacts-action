@@ -131,6 +131,7 @@ export class NextcloudClient {
         }
 
         await Promise.all(copies);
+        core.info(`files: ${await fs.readdir(artifactPath)}`);
 
         const archivePath = path.join(artifactPath, `${this.artifact}.zip`);
         await this.zip(path.join(artifactPath, this.artifact), archivePath);
@@ -184,7 +185,7 @@ export class NextcloudClient {
             headers: this.headers,
             body: JSON.stringify(body),
         });
-
+        res.status
         core.info(await res.text())
     }
 }
