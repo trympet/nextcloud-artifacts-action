@@ -168,7 +168,8 @@ export class NextcloudClient {
 
         return new Promise<string>((resolve, reject) => {
             stream.on('error', () => reject("Failed to upload file"))
-                .on('close', () => resolve(remoteFilePath));
+                .on('pipe', () => core.info("pipe"))
+                .on('finish', () => resolve(remoteFilePath));
         });
     }
 
