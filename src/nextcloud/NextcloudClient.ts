@@ -37,10 +37,14 @@ export class NextcloudClient {
     }
 
     public async uploadFiles(files: string[]) {
+        core.info("Begin uploading files...");
         const spec = this.uploadSpec(files);
+        core.info("Zipping files...");
         var zip = await this.zipFiles(spec);
 
+        core.info("Uploading to Nextcloud...");
         const path = await this.upload(zip);
+        core.info("Sharing file...");
         await this.shareFile(path);
     }
 
