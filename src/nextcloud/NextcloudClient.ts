@@ -24,8 +24,8 @@ export class NextcloudClient {
         private endpoint: string,
         private artifact: string,
         private rootDirectory: string) {
-            this.guid = uuidv4();
-            this.headers = {'Authorization': 'Basic ' + btoa(`${Inputs.Username}:${Inputs.Password}`)};
+        this.guid = uuidv4();
+        this.headers = { 'Authorization': 'Basic ' + btoa(`${Inputs.Username}:${Inputs.Password}`) };
     }
 
     public async uploadFiles(files: string[]) {
@@ -109,9 +109,12 @@ export class NextcloudClient {
         const copies = [];
         for (let spec of specs) {
             const dstpath = path.join(artifactPath, spec.uploadPath);
-            const promise = fs.mkdir(path.dirname(dstpath))
-                .then(() => fs.copyFile(spec.absolutePath, dstpath))
-            copies.push(promise);
+            const dstDir = path.dirname(dstpath);
+            if (!fsSync.existsSync(dstDir)) {
+                await fs.mkdir(dstDir, { recursive: true });
+            }
+
+            copies.push(fs.copyFile(spec.absolutePath, dstpath));
         }
 
         await Promise.all(copies);
