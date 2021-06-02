@@ -171,19 +171,19 @@ export class NextcloudClient {
     }
 
     private transferFile(remoteFilePath: string, file: string): Promise<[void, void]> {
-        const remoteStream = this.davClient.createWriteStream(remoteFilePath);
-        const remoteStreamPromise = new Promise<void>((resolve, reject) => {
-            remoteStream.on('error', () => reject("Failed to upload file"))
-                .on('close', () => resolve());
-        });
-
         const fileStream = fsSync.createReadStream(file);
         const fileStreamPromise = new Promise<void>((resolve, reject) => {
             fileStream.on('error', () => reject("Failed to read file"))
                 .on('end', () => resolve());
         });
+        const remoteStream = this.davClient.createWriteStream(remoteFilePath);
 
         fileStream.pipe(remoteStream);
+
+        const remoteStreamPromise = new Promise<void>((resolve, reject) => {
+            remoteStream.on('error', () => reject("Failed to upload file"))
+                .on('close', () => resolve());
+        });
 
         return Promise.all([remoteStreamPromise, fileStreamPromise]);
     }
