@@ -135,7 +135,7 @@ export class NextcloudClient {
 
         const archivePath = path.join(artifactPath, `${this.artifact}.zip`);
         await this.zip(path.join(artifactPath, this.artifact), archivePath);
-        core.info(`archive stat: ${await fs.stat(archivePath)}`);
+        core.info(`archive stat: ${(await fs.stat(archivePath)).size}`);
 
         return archivePath;
     }
