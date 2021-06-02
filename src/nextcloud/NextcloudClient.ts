@@ -150,11 +150,12 @@ export class NextcloudClient {
 
     private async upload(file: string) {
         const remoteFileDir = `/artifacts/${this.guid}`;
-        core.info("Creating directory...");
+        core.info("Checking directory...");
         if (!(await this.davClient.exists(remoteFileDir))) {
+            core.info("Creating directory...");
             await this.davClient.createDirectory(remoteFileDir, { recursive: true });
         }
-        
+
         const remoteFilePath = path.join(remoteFileDir, `${this.artifact}.zip`);
         core.info("Transferring file...");
         fsSync.createReadStream(file)
