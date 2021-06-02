@@ -153,7 +153,7 @@ export class NextcloudClient {
         })
     }
 
-    private async upload(file: string) {
+    private async upload(file: string): Promise<string> {
         const remoteFileDir = `/artifacts/${this.guid}`;
         core.info("Checking directory...");
         if (!(await this.davClient.exists(remoteFileDir))) {
@@ -164,6 +164,13 @@ export class NextcloudClient {
         const remoteFilePath = `${remoteFileDir}/${this.artifact}.zip`;
         core.info(`Transferring file... (${file})`);
 
+        await this.transferFile(remoteFilePath, file);
+
+        core.info("finish");
+        return remoteFilePath;
+    }
+
+    private transferFile(remoteFilePath: string, file: string): Promise<[void, void]> {
         const remoteStream = this.davClient.createWriteStream(remoteFilePath);
         const remoteStreamPromise = new Promise<void>((resolve, reject) => {
             remoteStream.on('error', () => reject("Failed to upload file"))
@@ -175,13 +182,10 @@ export class NextcloudClient {
             fileStream.on('error', () => reject("Failed to read file"))
                 .on('end', () => resolve());
         });
-        
+
         fileStream.pipe(remoteStream);
 
-        await Promise.all([remoteStreamPromise, fileStreamPromise]);
-
-        core.info("finish");
-        return remoteFilePath;
+        return Promise.all([remoteStreamPromise, fileStreamPromise]);
     }
 
     private async shareFile(remoteFilePath: string) {
