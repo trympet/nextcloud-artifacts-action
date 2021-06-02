@@ -30,7 +30,6 @@ export class NextcloudClient {
         this.guid = uuidv4();
         this.headers = { 'Authorization': 'Basic ' + btoa(`${Inputs.Username}:${Inputs.Password}`) };
         this.davClient = webdav.createClient(this.endpoint, {
-            authType: AuthType.Digest,
             username: Inputs.Username,
             password: Inputs.Password
         });
