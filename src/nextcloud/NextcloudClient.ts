@@ -43,6 +43,7 @@ export class NextcloudClient {
 
         core.info("Uploading to Nextcloud...");
         const path = await this.upload(zip);
+        core.info(`File path: ${path}`);
         core.info("Sharing file...");
         await this.shareFile(path);
     }
@@ -161,7 +162,7 @@ export class NextcloudClient {
         const stream = fsSync.createReadStream(file)
             .pipe(this.davClient.createWriteStream(remoteFilePath));
 
-        return await new Promise<string>((resolve, reject) =>{
+        return await new Promise<string>((resolve, reject) => {
             stream.on('error', () => reject("Failed to upload file"))
                 .on('finish', () => resolve(remoteFilePath));
         });
