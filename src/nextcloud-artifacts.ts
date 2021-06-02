@@ -4,7 +4,8 @@ import * as core from '@actions/core';
 
 try {
     var artifact = new NextcloudArtifact(Inputs.ArtifactName, Inputs.ArtifactPath, Inputs.NoFileBehvaior);
-    artifact.run();
+    artifact.run()
+        .catch(e => core.setFailed(e));
 } catch (error) {
     core.setFailed(error.message);
 }
