@@ -6,6 +6,7 @@ try {
     var artifact = new NextcloudArtifact(Inputs.ArtifactName, Inputs.ArtifactPath, Inputs.NoFileBehvaior);
     artifact.run()
         .catch(e => core.setFailed(e));
+    core.info("Finished");
 } catch (error) {
     core.setFailed(error.message);
 }
