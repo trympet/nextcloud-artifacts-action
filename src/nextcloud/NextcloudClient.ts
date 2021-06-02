@@ -140,13 +140,15 @@ export class NextcloudClient {
 
     private async zip(dirpath: string, destpath: string) {
         const archive = archiver.create('zip', { zlib: { level: 9 } });
-        const stream = fsSync.createWriteStream(destpath);
-        archive.directory(dirpath, false)
-            .on('error', e => Promise.reject())
-            .on('close', () => Promise.resolve())
-            .pipe(stream);
+        const stream = archive.directory(dirpath, false)
+            .pipe(fsSync.createWriteStream(destpath));
 
-        return archive.finalize();
+        await archive.finalize();
+
+        return await new Promise<void>((resolve, reject) => {
+            stream.on('error', e => reject(e))
+                .on('finish', () => resolve());
+        })
     }
 
     private async upload(file: string) {
