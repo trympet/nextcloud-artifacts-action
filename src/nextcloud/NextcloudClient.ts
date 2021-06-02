@@ -167,11 +167,13 @@ export class NextcloudClient {
         fsSync.createReadStream(file)
             .pipe(stream);
 
-        return await new Promise<string>((resolve, reject) => {
+        await new Promise<void>((resolve, reject) => {
             stream.on('error', () => reject("Failed to upload file"))
                 .on('pipe', () => core.info("pipe"))
-                .on('finish', () => resolve(remoteFilePath));
+                .on('finish', () => resolve());
         });
+        core.info("finish");
+        return remoteFilePath;
     }
 
     private async shareFile(remoteFilePath: string) {
