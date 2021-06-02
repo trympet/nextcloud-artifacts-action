@@ -145,7 +145,7 @@ export class NextcloudClient {
             body: stream,
             headers: this.headers
         });
-        core.debug(await res.json())
+        core.debug(await res.text())
 
         return filePath;
     }
@@ -165,6 +165,6 @@ export class NextcloudClient {
             body: JSON.stringify(body),
         });
 
-        core.debug(await res.json())
+        core.debug(await res.text())
     }
 }
