@@ -1,6 +1,6 @@
 import * as fsSync from 'fs'
 import * as path from 'path'
-import core from '@actions/core';
+import * as core from '@actions/core';
 import * as os from 'os';
 import { randomUUID } from 'crypto';
 import * as archiver from 'archiver';

@@ -1,4 +1,4 @@
-import core from '@actions/core';
+import * as core from '@actions/core';
 import { FileFinder } from '../FileFinder';
 import { Inputs } from '../Inputs';
 import { NextcloudClient } from './NextcloudClient';

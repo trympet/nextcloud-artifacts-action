@@ -1,4 +1,4 @@
-import core from '@actions/core';
+import * as core from '@actions/core';
 import { NoFileOption } from './NoFileOption';
 
 export class Inputs {
@@ -27,7 +27,7 @@ export class Inputs {
     }
 
     static get NoFileBehvaior(): NoFileOption {
-        const notFoundAction = core.getInput("if-no-files-found");
+        const notFoundAction = core.getInput("if-no-files-found") || NoFileOption.warn;
         const noFileBehavior: NoFileOption = NoFileOption[notFoundAction as keyof typeof NoFileOption];
 
         if (!noFileBehavior) {
