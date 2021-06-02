@@ -3,13 +3,10 @@ import * as path from 'path'
 import * as core from '@actions/core';
 import * as os from 'os';
 import * as archiver from 'archiver';
-import { URL } from 'url';
 import fetch, { HeadersInit } from 'node-fetch';
-import { Inputs } from '../Inputs';
 import btoa from 'btoa';
 import { v4 as uuidv4 } from 'uuid';
 import * as webdav from 'webdav'
-import { AuthType } from 'webdav';
 
 const fs = fsSync.promises;
 
@@ -26,12 +23,14 @@ export class NextcloudClient {
     public constructor(
         private endpoint: string,
         private artifact: string,
-        private rootDirectory: string) {
+        private rootDirectory: string,
+        private username: string,
+        private password: string) {
         this.guid = uuidv4();
-        this.headers = { 'Authorization': 'Basic ' + btoa(`${Inputs.Username}:${Inputs.Password}`) };
-        this.davClient = webdav.createClient(`${this.endpoint}/remote.php/dav/files/${Inputs.Username}`, {
-            username: Inputs.Username,
-            password: Inputs.Password,
+        this.headers = { 'Authorization': 'Basic ' + btoa(`${this.username}:${this.password}`) };
+        this.davClient = webdav.createClient(`${this.endpoint}/remote.php/dav/files/${this.username}`, {
+            username: this.username,
+            password: this.password,
         });
     }
 
@@ -164,28 +163,20 @@ export class NextcloudClient {
         const remoteFilePath = `${remoteFileDir}/${this.artifact}.zip`;
         core.info(`Transferring file... (${file})`);
 
-        await this.transferFile(remoteFilePath, file);
-
-        core.info("finish");
-        return remoteFilePath;
-    }
-
-    private transferFile(remoteFilePath: string, file: string): Promise<[void, void]> {
+        const fileStat = await fs.stat(file);
         const fileStream = fsSync.createReadStream(file);
-        const fileStreamPromise = new Promise<void>((resolve, reject) => {
-            fileStream.on('error', () => reject("Failed to read file"))
-                .on('end', () => resolve());
+        const remoteStream = this.davClient.createWriteStream(remoteFilePath, {
+            headers: { "Content-Length": fileStat.size.toString() },
         });
-        const remoteStream = this.davClient.createWriteStream(remoteFilePath);
 
         fileStream.pipe(remoteStream);
 
-        const remoteStreamPromise = new Promise<void>((resolve, reject) => {
-            remoteStream.on('error', () => reject("Failed to upload file"))
-                .on('close', () => resolve());
+        await new Promise<void>((resolve, reject) => {
+            fileStream.on('error', e => reject(e))
+                .on('finish', () => resolve());
         });
 
-        return Promise.all([remoteStreamPromise, fileStreamPromise]);
+        return remoteFilePath;
     }
 
     private async shareFile(remoteFilePath: string) {

@@ -25,7 +25,7 @@ export class NextcloudArtifact {
     private async uploadFiles(files: { filesToUpload: string[]; rootDirectory: string; }) {
         this.logUpload(files.filesToUpload.length, files.rootDirectory);
 
-        const client = new NextcloudClient(Inputs.Endpoint, this.name, files.rootDirectory);
+        const client = new NextcloudClient(Inputs.Endpoint, this.name, files.rootDirectory, Inputs.Username, Inputs.Password);
 
         await client.uploadFiles(files.filesToUpload);
     }
