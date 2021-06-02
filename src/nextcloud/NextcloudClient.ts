@@ -8,6 +8,8 @@ import fetch, { HeadersInit } from 'node-fetch';
 import { Inputs } from '../Inputs';
 import btoa from 'btoa';
 import { v4 as uuidv4 } from 'uuid';
+import * as webdav from 'webdav'
+import { AuthType } from 'webdav';
 
 const fs = fsSync.promises;
 
@@ -19,6 +21,7 @@ interface FileSpec {
 export class NextcloudClient {
     private guid: string;
     private headers: HeadersInit;
+    private davClient;
 
     public constructor(
         private endpoint: string,
@@ -26,11 +29,17 @@ export class NextcloudClient {
         private rootDirectory: string) {
         this.guid = uuidv4();
         this.headers = { 'Authorization': 'Basic ' + btoa(`${Inputs.Username}:${Inputs.Password}`) };
+        this.davClient = webdav.createClient(this.endpoint, {
+            authType: AuthType.Digest,
+            username: Inputs.Username,
+            password: Inputs.Password
+        });
     }
 
     public async uploadFiles(files: string[]) {
         const spec = this.uploadSpec(files);
         var zip = await this.zipFiles(spec);
+
         const path = await this.upload(zip);
         await this.shareFile(path);
     }
@@ -137,23 +146,24 @@ export class NextcloudClient {
     }
 
     private async upload(file: string) {
-        const filePath = `/artifacts/${this.guid}/${this.artifact}`;
-        const url = this.endpoint + `/remote.php/dav/files/${Inputs.Username}` + filePath;
+        const remoteFileDir = `/artifacts/${this.guid}`;
+        if (!(await this.davClient.exists(remoteFileDir))) {
+            await this.davClient.createDirectory(remoteFileDir, { recursive: true });
+        }
+        
+        const remoteFilePath = path.join(remoteFileDir, `${this.artifact}.zip`);
         const stream = fsSync.createReadStream(file);
-        const res = await fetch(url, {
-            method: 'PUT',
-            body: stream,
-            headers: this.headers
+        await this.davClient.putFileContents(remoteFilePath, stream, {
+            onUploadProgress: p => core.debug(`Progress: ${p.loaded}/${p.total}`),
         });
-        core.debug(await res.text())
 
-        return filePath;
+        return remoteFilePath;
     }
 
-    private async shareFile(nextcloudPath: string) {
+    private async shareFile(remoteFilePath: string) {
         const url = this.endpoint + `/ocs/v2.php/apps/files_sharing/api/v1/shares`;
         const body = {
-            path: nextcloudPath,
+            path: remoteFilePath,
             shareType: 3,
             publicUpload: "false",
             permissions: 1,
