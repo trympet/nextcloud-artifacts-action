@@ -131,10 +131,11 @@ export class NextcloudClient {
         }
 
         await Promise.all(copies);
-        core.info(`files: ${await fs.readdir(artifactPath)}`);
+        core.info(`files: ${await fs.readdir(path.join(artifactPath, this.artifact))}`);
 
         const archivePath = path.join(artifactPath, `${this.artifact}.zip`);
         await this.zip(path.join(artifactPath, this.artifact), archivePath);
+        core.info(`archive stat: ${await fs.stat(archivePath)}`);
 
         return archivePath;
     }
