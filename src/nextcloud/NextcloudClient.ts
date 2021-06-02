@@ -105,7 +105,7 @@ export class NextcloudClient {
     private async zipFiles(specs: FileSpec[]): Promise<string> {
         const tempArtifactDir = path.join(os.tmpdir(), this.guid);
         const artifactPath = path.join(tempArtifactDir, `artifact-${this.artifact}`);
-        await fs.mkdir(artifactPath, { recursive: true });
+        await fs.mkdir(path.join(artifactPath, this.artifact), { recursive: true });
         for (let spec of specs) {
             await fs.copyFile(spec.absolutePath, path.join(artifactPath, spec.uploadPath));
         }
