@@ -157,7 +157,7 @@ export class NextcloudClient {
             await this.davClient.createDirectory(remoteFileDir, { recursive: true });
         }
 
-        const remoteFilePath = path.join(remoteFileDir, `${this.artifact}.zip`);
+        const remoteFilePath = `${remoteFileDir}/${this.artifact}.zip`;
         core.info("Transferring file...");
         const stream = fsSync.createReadStream(file)
             .pipe(this.davClient.createWriteStream(remoteFilePath));
@@ -183,6 +183,6 @@ export class NextcloudClient {
             body: JSON.stringify(body),
         });
 
-        core.debug(await res.text())
+        core.info(await res.text())
     }
 }
