@@ -149,7 +149,7 @@ export class NextcloudClient {
 
         return await new Promise<void>((resolve, reject) => {
             stream.on('error', e => reject(e))
-                .on('finish', () => resolve());
+                .on('close', () => resolve());
         })
     }
 
@@ -162,13 +162,13 @@ export class NextcloudClient {
         }
 
         const remoteFilePath = `${remoteFileDir}/${this.artifact}.zip`;
-        core.info("Transferring file...");
+        core.info(`Transferring file... (${file})`);
         const stream = fsSync.createReadStream(file)
             .pipe(this.davClient.createWriteStream(remoteFilePath));
 
         return await new Promise<string>((resolve, reject) => {
             stream.on('error', () => reject("Failed to upload file"))
-                .on('finish', () => resolve(remoteFilePath));
+                .on('close', () => resolve(remoteFilePath));
         });
     }
 
