@@ -6,7 +6,9 @@ import * as os from 'os';
 import { randomUUID } from 'crypto';
 import * as archiver from 'archiver';
 import { URL } from 'url';
-import fetch from 'node-fetch';
+import fetch, { HeadersInit } from 'node-fetch';
+import { Inputs } from '../Inputs';
+import btoa from 'btoa';
 
 interface FileSpec {
     absolutePath: string,
@@ -14,15 +16,22 @@ interface FileSpec {
 }
 
 export class NextcloudClient {
+    private guid: string;
+    private headers: HeadersInit;
+
     public constructor(
         private endpoint: string,
         private artifact: string,
-        private rootDirectory: string) { }
+        private rootDirectory: string) {
+            this.guid = randomUUID();
+            this.headers = {'Authorization': 'Basic ' + btoa(`${Inputs.Username}:${Inputs.Password}`)};
+    }
 
     public async uploadFiles(files: string[]) {
         const spec = this.uploadSpec(files);
         var zip = await this.zipFiles(spec);
-        await this.upload(zip);
+        const path = await this.upload(zip);
+        await this.shareFile(path);
     }
 
     private uploadSpec(files: string[]): FileSpec[] {
@@ -93,7 +102,7 @@ export class NextcloudClient {
 
 
     private async zipFiles(specs: FileSpec[]): Promise<string> {
-        const tempArtifactDir = path.join(os.tmpdir(), randomUUID());
+        const tempArtifactDir = path.join(os.tmpdir(), this.guid);
         const artifactPath = path.join(tempArtifactDir, `artifact-${this.artifact}`);
         await fs.mkdir(artifactPath, { recursive: true });
         for (let spec of specs) {
@@ -118,15 +127,34 @@ export class NextcloudClient {
     }
 
     private async upload(file: string) {
-        const url = new URL(this.endpoint, '/remote.php/dav/files/user/path/to/file');
+        const filePath = `/artifacts/${this.guid}/${this.artifact}`;
+        const url = this.endpoint + `/remote.php/dav/files/${Inputs.Username}` + filePath;
         const stream = fsSync.createReadStream(file);
-        await fetch(url.href, {
+        const res = await fetch(url, {
             method: 'PUT',
-            body: stream
+            body: stream,
+            headers: this.headers
         });
+        core.debug(await res.json())
+
+        return filePath;
     }
 
-    private shareFile() {
+    private async shareFile(nextcloudPath: string) {
+        const url = this.endpoint + `/ocs/v2.php/apps/files_sharing/api/v1/shares`;
+        const body = {
+            path: nextcloudPath,
+            shareType: 3,
+            publicUpload: "false",
+            permissions: 1,
+        };
 
+        const res = await fetch(url, {
+            method: 'PUT',
+            headers: this.headers,
+            body: JSON.stringify(body),
+        });
+
+        core.debug(await res.json())
     }
 }

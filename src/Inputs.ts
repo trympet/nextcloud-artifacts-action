@@ -18,6 +18,14 @@ export class Inputs {
         return core.getInput("nextcloud-url");
     }
 
+    static get Username(): string {
+        return core.getInput("nextcloud-username");
+    }
+
+    static get Password(): string {
+        return core.getInput("nextcloud-password");
+    }
+
     static get NoFileBehvaior(): NoFileOption {
         const notFoundAction = core.getInput("if-no-files-found");
         const noFileBehavior: NoFileOption = NoFileOption[notFoundAction as keyof typeof NoFileOption];

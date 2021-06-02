@@ -11,6 +11,12 @@ inputs:
   nextcloud-url:
     description: 'The URL for the nextcloud server'
     required: true
+  nextcloud-username:
+    description: 'The username for the nextcloud user'
+    required: true
+  nextcloud-password:
+    description: 'The password for the nextcloud user'
+    required: true
   if-no-files-found:
     description: >
       The desired behavior if no files are found using the provided path.
