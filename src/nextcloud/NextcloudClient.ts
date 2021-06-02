@@ -29,7 +29,7 @@ export class NextcloudClient {
         private rootDirectory: string) {
         this.guid = uuidv4();
         this.headers = { 'Authorization': 'Basic ' + btoa(`${Inputs.Username}:${Inputs.Password}`) };
-        this.davClient = webdav.createClient(`${this.endpoint}/remote.php/dav`, {
+        this.davClient = webdav.createClient(`${this.endpoint}/remote.php/dav/files/${Inputs.Username}`, {
             username: Inputs.Username,
             password: Inputs.Password,
         });
