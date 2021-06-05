@@ -395,7 +395,8 @@ class NextcloudArtifact {
                 conclusion: 'failure',
                 status: 'completed',
                 output: {
-                    title: 'Nextcloud Artifacts'
+                    title: 'Nextcloud Artifacts',
+                    summary: 'Check failed.'
                 },
                 ...github.context.repo
             });
@@ -630,8 +631,10 @@ class NextcloudClient {
             body: JSON.stringify(body)
         });
         const result = await res.text();
+        core.debug(`Share response: ${result}`);
         const re = /<url>(?<share_url>.*)<\/url>/;
         const match = re.exec(result);
+        core.debug(`Match groups:\n${JSON.stringify(match === null || match === void 0 ? void 0 : match.groups)}`);
         const sharableUrl = ((match === null || match === void 0 ? void 0 : match.groups) || {})['share_url'];
         if (!sharableUrl) {
             throw new Error('Failed to parse sharable URL.');

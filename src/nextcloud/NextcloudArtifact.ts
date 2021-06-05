@@ -108,7 +108,8 @@ export class NextcloudArtifact {
         conclusion: 'failure',
         status: 'completed',
         output: {
-          title: 'Nextcloud Artifacts'
+          title: 'Nextcloud Artifacts',
+          summary: 'Check failed.'
         },
         ...github.context.repo
       })
