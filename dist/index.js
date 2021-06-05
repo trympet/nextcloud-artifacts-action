@@ -620,6 +620,8 @@ class NextcloudClient {
         const timer = setTimeout(() => { }, 20000);
         await fileStreamPromise;
         await remoteStreamPromise;
+        // Wait for file to be processed
+        await new Promise(resolve => setTimeout(resolve, 1000));
         clearTimeout(timer);
         return remoteFilePath;
     }
