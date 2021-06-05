@@ -162,21 +162,22 @@ export class NextcloudClient {
 
     const fileStat = await fs.stat(file)
     const fileStream = fsSync.createReadStream(file)
+    const fileStreamPromise = new Promise<void>((resolve, reject) => {
+      fileStream.on('error', e => reject(e)).on('close', () => resolve())
+    })
     const remoteStream = this.davClient.createWriteStream(remoteFilePath, {
       headers: { 'Content-Length': fileStat.size.toString() }
+    })
+    const reamteStreamPromise = new Promise<void>((resolve, reject) => {
+      remoteStream.on('error', e => reject(e)).on('finish', () => resolve())
     })
 
     fileStream.pipe(remoteStream)
 
     // see: https://github.com/nodejs/node/issues/22088
     const timer = setTimeout(() => {}, 20_000);
-    await new Promise<void>((resolve, reject) => {
-      fileStream.on('error', e => reject(e)).on('close', () => resolve())
-    })
-    
-    await new Promise<void>((resolve, reject) => {
-      remoteStream.on('error', e => reject(e)).on('close', () => resolve())
-    })
+    await fileStreamPromise
+    await reamteStreamPromise
 
     clearTimeout(timer);
     return remoteFilePath
