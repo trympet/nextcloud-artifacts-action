@@ -612,14 +612,10 @@ class NextcloudClient {
         const remoteStream = this.davClient.createWriteStream(remoteFilePath, {
             headers: { 'Content-Length': fileStat.size.toString() }
         });
-        const reamteStreamPromise = new Promise((resolve, reject) => {
-            remoteStream.on('error', e => reject(e)).on('finish', () => resolve());
-        });
         fileStream.pipe(remoteStream);
         // see: https://github.com/nodejs/node/issues/22088
         const timer = setTimeout(() => { }, 20000);
         await fileStreamPromise;
-        await reamteStreamPromise;
         clearTimeout(timer);
         return remoteFilePath;
     }
