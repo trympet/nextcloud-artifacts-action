@@ -30,6 +30,10 @@ inputs:
       Duration after which artifact will expire in days. 0 means using default retention.
       Minimum 1 day.
       Maximum 90 days unless changed from the repository settings page.
+  token:
+    description: GitHub Access Token
+    required: false
+    default: ${{ github.token }}
 runs:
   using: 'node12'
   main: 'dist/index.js'

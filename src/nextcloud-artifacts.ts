@@ -1,12 +1,15 @@
-import { Inputs } from './Inputs';
-import { NextcloudArtifact } from './nextcloud/NextcloudArtifact';
-import * as core from '@actions/core';
+import {NextcloudArtifact} from './nextcloud/NextcloudArtifact'
+import * as core from '@actions/core'
+import {ActionInputs} from './ActionInputs'
 
-try {
-    var artifact = new NextcloudArtifact(Inputs.ArtifactName, Inputs.ArtifactPath, Inputs.NoFileBehvaior);
-    artifact.run()
-        .catch(e => core.setFailed(e));
-    core.info("Finished");
-} catch (error) {
-    core.setFailed(error.message);
+async function run() {
+  try {
+    const artifact = new NextcloudArtifact(new ActionInputs())
+    await artifact.run()
+    core.info('Finished')
+  } catch (error) {
+    core.setFailed(error.message)
+  }
 }
+
+run()

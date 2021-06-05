@@ -1,64 +1,139 @@
-import * as core from '@actions/core';
-import { FileFinder } from '../FileFinder';
-import { Inputs } from '../Inputs';
-import { NextcloudClient } from './NextcloudClient';
-import { NoFileOption } from '../NoFileOption';
+import * as core from '@actions/core'
+import * as github from '@actions/github'
+import { GitHub } from '@actions/github/lib/utils'
+
+import { FileFinder } from '../FileFinder'
+import { Inputs } from '../Inputs'
+import { NextcloudClient } from './NextcloudClient'
+import { NoFileOption } from '../NoFileOption'
 
 export class NextcloudArtifact {
-    public constructor(
-        private name: string,
-        private path: string,
-        private errorBehavior: NoFileOption) { }
+  readonly octokit: InstanceType<typeof GitHub>
+  readonly context = NextcloudArtifact.getCheckRunContext()
+  readonly token: string
+  readonly name: string
+  readonly path: string
+  readonly errorBehavior: NoFileOption
 
-    public async run() {
-        const fileFinder = new FileFinder(this.path);
-        const files = await fileFinder.findFiles();
+  constructor(private inputs: Inputs) {
+    this.token = inputs.Token;
+    this.name = inputs.ArtifactName
+    this.path = inputs.ArtifactPath
+    this.errorBehavior = inputs.NoFileBehvaior
+    this.name = inputs.ArtifactName
+    this.octokit = github.getOctokit(this.token)
+  }
 
-        if (files.filesToUpload.length > 0) {
-            await this.uploadFiles(files);
-        }
-        else {
-            this.logNoFilesFound();
-        }
+  async run() {
+    const fileFinder = new FileFinder(this.path)
+    const files = await fileFinder.findFiles()
+
+    if (files.filesToUpload.length > 0) {
+      await this.uploadFiles(files)
+    } else {
+      this.logNoFilesFound()
+    }
+  }
+
+  private static getCheckRunContext(): { sha: string; runId: number } {
+    if (github.context.eventName === 'workflow_run') {
+      core.info('Action was triggered by workflow_run: using SHA and RUN_ID from triggering workflow')
+      const event = github.context.payload
+      if (!event.workflow_run) {
+        throw new Error("Event of type 'workflow_run' is missing 'workflow_run' field")
+      }
+      return {
+        sha: event.workflow_run.head_commit.id,
+        runId: event.workflow_run.id
+      }
     }
 
-    private async uploadFiles(files: { filesToUpload: string[]; rootDirectory: string; }) {
-        this.logUpload(files.filesToUpload.length, files.rootDirectory);
-
-        const client = new NextcloudClient(Inputs.Endpoint, this.name, files.rootDirectory, Inputs.Username, Inputs.Password);
-
-        await client.uploadFiles(files.filesToUpload);
+    const runId = github.context.runId
+    if (github.context.payload.pull_request) {
+      core.info(`Action was triggered by ${github.context.eventName}: using SHA from head of source branch`)
+      const pr = github.context.payload.pull_request
+      return { sha: pr.head.sha, runId }
     }
 
-    private logUpload(fileCount: number, rootDirectory: string) {
-        const s = fileCount === 1 ? '' : 's';
-        core.info(
-            `With the provided path, there will be ${fileCount} file${s} uploaded`
-        );
-        core.debug(`Root artifact directory is ${rootDirectory}`);
+    return { sha: github.context.sha, runId }
+  }
 
-        if (fileCount > 10000) {
-            core.warning(
-                `There are over 10,000 files in this artifact, consider create an archive before upload to improve the upload performance.`
-            );
-        }
-    }
+  private async uploadFiles(files: { filesToUpload: string[]; rootDirectory: string }) {
+    this.logUpload(files.filesToUpload.length, files.rootDirectory)
+    const createResp = await this.octokit.rest.checks.create({
+      head_sha: this.context.sha,
+      name: 'Nextcloud Artifacts',
+      status: 'in_progress',
+      output: {
+        title: 'Nextcloud Artifacts',
+        summary: ''
+      },
+      ...github.context.repo
+    })
 
-    private logNoFilesFound() {
-        const errorMessage = `No files were found with the provided path: ${this.path}. No artifacts will be uploaded.`;
-        switch (this.errorBehavior) {
-            case NoFileOption.warn: {
-                core.warning(errorMessage);
-                break;
-            }
-            case NoFileOption.error: {
-                core.setFailed(errorMessage);
-                break;
-            }
-            case NoFileOption.ignore: {
-                core.info(errorMessage);
-                break;
-            }
-        }
+    const client = new NextcloudClient(
+      this.inputs.Endpoint,
+      this.name,
+      files.rootDirectory,
+      this.inputs.Username,
+      this.inputs.Password
+    )
+
+    try {
+      const shareableUrl = await client.uploadFiles(files.filesToUpload)
+      const resp = await this.octokit.rest.checks.update({
+        check_run_id: createResp.data.id,
+        conclusion: 'success',
+        status: 'completed',
+        output: {
+          title: 'Nextcloud Artifacts',
+          summary: `${this.name}: ${shareableUrl}`
+        },
+        ...github.context.repo
+      })
+      core.info(`Check run create response: ${resp.status}`)
+      core.info(`Check run URL: ${resp.data.url}`)
+      core.info(`Check run HTML: ${resp.data.html_url}`)
+    } catch (error) {
+      await this.octokit.rest.checks.update({
+        check_run_id: createResp.data.id,
+        conclusion: 'failure',
+        status: 'completed',
+        output: {
+          title: 'Nextcloud Artifacts'
+        },
+        ...github.context.repo
+      })
     }
+  }
+
+  private logUpload(fileCount: number, rootDirectory: string) {
+    const s = fileCount === 1 ? '' : 's'
+    core.info(`With the provided path, there will be ${fileCount} file${s} uploaded`)
+    core.debug(`Root artifact directory is ${rootDirectory}`)
+
+    if (fileCount > 10000) {
+      core.warning(
+        `There are over 10,000 files in this artifact, consider create an archive before upload to improve the upload performance.`
+      )
+    }
+  }
+
+  private logNoFilesFound() {
+    const errorMessage = `No files were found with the provided path: ${this.path}. No artifacts will be uploaded.`
+    switch (this.errorBehavior) {
+      case NoFileOption.warn: {
+        core.warning(errorMessage)
+        break
+      }
+      case NoFileOption.error: {
+        core.setFailed(errorMessage)
+        break
+      }
+      case NoFileOption.ignore: {
+        core.info(errorMessage)
+        break
+      }
+    }
+  }
 }
