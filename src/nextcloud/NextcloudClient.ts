@@ -187,7 +187,8 @@ export class NextcloudClient {
     const res = await fetch(url, {
       method: 'POST',
       headers: Object.assign(this.headers, {
-        'OCS-APIRequest': true
+        'OCS-APIRequest': true,
+        'Content-Type': 'application/json'
       }),
       body: JSON.stringify(body)
     })
