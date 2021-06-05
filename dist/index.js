@@ -610,12 +610,15 @@ class NextcloudClient {
             headers: { 'Content-Length': fileStat.size.toString() }
         });
         fileStream.pipe(remoteStream);
+        // see: https://github.com/nodejs/node/issues/22088
+        const timer = setTimeout(() => { }, 20000);
         await new Promise((resolve, reject) => {
             fileStream.on('error', e => reject(e)).on('close', () => resolve());
         });
         await new Promise((resolve, reject) => {
             remoteStream.on('error', e => reject(e)).on('close', () => resolve());
         });
+        clearTimeout(timer);
         return remoteFilePath;
     }
     async shareFile(remoteFilePath) {

@@ -168,14 +168,17 @@ export class NextcloudClient {
 
     fileStream.pipe(remoteStream)
 
+    // see: https://github.com/nodejs/node/issues/22088
+    const timer = setTimeout(() => {}, 20_000);
     await new Promise<void>((resolve, reject) => {
       fileStream.on('error', e => reject(e)).on('close', () => resolve())
     })
-
+    
     await new Promise<void>((resolve, reject) => {
       remoteStream.on('error', e => reject(e)).on('close', () => resolve())
     })
 
+    clearTimeout(timer);
     return remoteFilePath
   }
 
