@@ -15,8 +15,8 @@ export class InputsDouble implements Inputs {
     return ''
   }
 
-  get Endpoint(): string {
-    return process.env['ENDPOINT']!
+  get Endpoint(): URL {
+    return new URL(process.env['ENDPOINT']!)
   }
 
   get Username(): string {

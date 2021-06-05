@@ -7,6 +7,7 @@ import fetch, { HeadersInit } from 'node-fetch'
 import btoa from 'btoa'
 import { v4 as uuidv4 } from 'uuid'
 import * as webdav from 'webdav'
+import { URL } from 'url'
 
 const fs = fsSync.promises
 
@@ -21,7 +22,7 @@ export class NextcloudClient {
   private davClient
 
   constructor(
-    private endpoint: string,
+    private endpoint: URL,
     private artifact: string,
     private rootDirectory: string,
     private username: string,
@@ -29,7 +30,7 @@ export class NextcloudClient {
   ) {
     this.guid = uuidv4()
     this.headers = { Authorization: 'Basic ' + btoa(`${this.username}:${this.password}`) }
-    this.davClient = webdav.createClient(`${this.endpoint}/remote.php/dav/files/${this.username}`, {
+    this.davClient = webdav.createClient(`${this.endpoint.href}remote.php/dav/files/${this.username}`, {
       username: this.username,
       password: this.password
     })
@@ -150,7 +151,7 @@ export class NextcloudClient {
   }
 
   private async shareFile(remoteFilePath: string): Promise<string> {
-    const url = this.endpoint + `/ocs/v2.php/apps/files_sharing/api/v1/shares`
+    const url = `${this.endpoint.href}ocs/v2.php/apps/files_sharing/api/v1/shares`
     const body = {
       path: remoteFilePath,
       shareType: 3,
@@ -174,7 +175,7 @@ export class NextcloudClient {
     core.debug(`Match groups:\n${JSON.stringify(match?.groups)}`)
     const sharableUrl = (match?.groups || {})['share_url']
     if (!sharableUrl) {
-      throw new Error('Failed to parse sharable URL.')
+      throw new Error(`Failed to parse or find sharable URL:\n${result}`)
     }
 
     return sharableUrl

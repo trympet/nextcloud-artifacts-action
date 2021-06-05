@@ -29,30 +29,28 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ActionInputs = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const NoFileOption_1 = __nccwpck_require__(4295);
+const url_1 = __nccwpck_require__(8835);
 class ActionInputs {
     get ArtifactName() {
-        return core.getInput('name');
+        return core.getInput('name', { required: false }) || 'Nextcloud Artifact';
     }
     get ArtifactPath() {
-        return core.getInput('path');
-    }
-    get Retention() {
-        return core.getInput('retention-days');
+        return core.getInput('path', { required: true });
     }
     get Endpoint() {
-        return core.getInput('nextcloud-url');
+        return new url_1.URL(core.getInput('nextcloud-url', { required: true }));
     }
     get Username() {
-        return core.getInput('nextcloud-username');
+        return core.getInput('nextcloud-username', { required: true });
     }
     get Password() {
-        return core.getInput('nextcloud-password');
+        return core.getInput('nextcloud-password', { required: true });
     }
     get Token() {
         return core.getInput('token', { required: true });
     }
     get NoFileBehvaior() {
-        const notFoundAction = core.getInput('if-no-files-found') || NoFileOption_1.NoFileOption.warn;
+        const notFoundAction = core.getInput('if-no-files-found', { required: false }) || NoFileOption_1.NoFileOption.warn;
         const noFileBehavior = NoFileOption_1.NoFileOption[notFoundAction];
         if (!noFileBehavior) {
             core.setFailed(`Unrecognized ${'ifNoFilesFound'} input. Provided: ${notFoundAction}. Available options: ${Object.keys(NoFileOption_1.NoFileOption)}`);
@@ -360,21 +358,22 @@ class NextcloudArtifact {
             name: 'Nextcloud Artifacts',
             status: 'in_progress',
             output: {
-                title: 'Nextcloud Artifacts',
-                summary: ''
+                title: `Nextcloud (${this.name})`,
+                summary: 'Uploading...'
             },
             ...github.context.repo
         });
         const client = new NextcloudClient_1.NextcloudClient(this.inputs.Endpoint, this.name, files.rootDirectory, this.inputs.Username, this.inputs.Password);
         try {
             const shareableUrl = await client.uploadFiles(files.filesToUpload);
+            core.info(`Nextcloud shareable URL: ${shareableUrl}`);
             const resp = await this.octokit.rest.checks.update({
                 check_run_id: createResp.data.id,
                 conclusion: 'success',
                 status: 'completed',
                 output: {
-                    title: 'Nextcloud Artifacts',
-                    summary: `${this.name}: ${shareableUrl}`
+                    title: `Nextcloud (${this.name})`,
+                    summary: shareableUrl
                 },
                 ...github.context.repo
             });
@@ -383,9 +382,8 @@ class NextcloudArtifact {
             core.info(`Check run HTML: ${resp.data.html_url}`);
         }
         catch (error) {
-            core.error(error);
             await this.trySetFailed(createResp.data.id);
-            core.setFailed('Failed to update check');
+            core.setFailed(error);
         }
     }
     async trySetFailed(checkId) {
@@ -395,7 +393,7 @@ class NextcloudArtifact {
                 conclusion: 'failure',
                 status: 'completed',
                 output: {
-                    title: 'Nextcloud Artifacts',
+                    title: `Nextcloud (${this.name})`,
                     summary: 'Check failed.'
                 },
                 ...github.context.repo
@@ -486,7 +484,7 @@ class NextcloudClient {
         this.password = password;
         this.guid = uuid_1.v4();
         this.headers = { Authorization: 'Basic ' + btoa_1.default(`${this.username}:${this.password}`) };
-        this.davClient = webdav.createClient(`${this.endpoint}/remote.php/dav/files/${this.username}`, {
+        this.davClient = webdav.createClient(`${this.endpoint.href}remote.php/dav/files/${this.username}`, {
             username: this.username,
             password: this.password
         });
@@ -498,8 +496,7 @@ class NextcloudClient {
         const zip = await this.zipFiles(spec);
         core.info('Uploading to Nextcloud...');
         const filePath = await this.upload(zip);
-        core.info(`File path: ${filePath}`);
-        core.info('Sharing file...');
+        core.info(`Remote file path: ${filePath}`);
         return await this.shareFile(filePath);
     }
     uploadSpec(files) {
@@ -510,58 +507,25 @@ class NextcloudClient {
         if (!fsSync.lstatSync(this.rootDirectory).isDirectory()) {
             throw new Error(`this.rootDirectory ${this.rootDirectory} is not a valid directory`);
         }
-        // Normalize and resolve, this allows for either absolute or relative paths to be used
         let root = path.normalize(this.rootDirectory);
         root = path.resolve(root);
-        /*
-               Example to demonstrate behavior
-               
-               Input:
-                 artifactName: my-artifact
-                 rootDirectory: '/home/user/files/plz-upload'
-                 artifactFiles: [
-                   '/home/user/files/plz-upload/file1.txt',
-                   '/home/user/files/plz-upload/file2.txt',
-                   '/home/user/files/plz-upload/dir/file3.txt'
-                 ]
-               
-               Output:
-                 specifications: [
-                   ['/home/user/files/plz-upload/file1.txt', 'my-artifact/file1.txt'],
-                   ['/home/user/files/plz-upload/file1.txt', 'my-artifact/file2.txt'],
-                   ['/home/user/files/plz-upload/file1.txt', 'my-artifact/dir/file3.txt']
-                 ]
-            */
         for (let file of files) {
             if (!fsSync.existsSync(file)) {
                 throw new Error(`File ${file} does not exist`);
             }
             if (!fsSync.lstatSync(file).isDirectory()) {
-                // Normalize and resolve, this allows for either absolute or relative paths to be used
                 file = path.normalize(file);
                 file = path.resolve(file);
                 if (!file.startsWith(root)) {
                     throw new Error(`The rootDirectory: ${root} is not a parent directory of the file: ${file}`);
                 }
-                // Check for forbidden characters in file paths that will be rejected during upload
                 const uploadPath = file.replace(root, '');
-                /*
-                          uploadFilePath denotes where the file will be uploaded in the file container on the server. During a run, if multiple artifacts are uploaded, they will all
-                          be saved in the same container. The artifact name is used as the root directory in the container to separate and distinguish uploaded artifacts
-                  
-                          path.join handles all the following cases and would return 'artifact-name/file-to-upload.txt
-                            join('artifact-name/', 'file-to-upload.txt')
-                            join('artifact-name/', '/file-to-upload.txt')
-                            join('artifact-name', 'file-to-upload.txt')
-                            join('artifact-name', '/file-to-upload.txt')
-                        */
                 specifications.push({
                     absolutePath: file,
                     uploadPath: path.join(this.artifact, uploadPath)
                 });
             }
             else {
-                // Directories are rejected by the server during upload
                 core.debug(`Removing ${file} from rawSearchResults because it is a directory`);
             }
         }
@@ -584,7 +548,6 @@ class NextcloudClient {
         core.info(`files: ${await fs.readdir(path.join(artifactPath, this.artifact))}`);
         const archivePath = path.join(artifactPath, `${this.artifact}.zip`);
         await this.zip(path.join(artifactPath, this.artifact), archivePath);
-        core.info(`archive stat: ${(await fs.stat(archivePath)).size}`);
         return archivePath;
     }
     async zip(dirpath, destpath) {
@@ -597,13 +560,11 @@ class NextcloudClient {
     }
     async upload(file) {
         const remoteFileDir = `/artifacts/${this.guid}`;
-        core.info('Checking directory...');
         if (!(await this.davClient.exists(remoteFileDir))) {
-            core.info('Creating directory...');
             await this.davClient.createDirectory(remoteFileDir, { recursive: true });
         }
         const remoteFilePath = `${remoteFileDir}/${this.artifact}.zip`;
-        core.info(`Transferring file... (${file})`);
+        core.debug(`Transferring file... (${file})`);
         const fileStat = await fs.stat(file);
         const fileStream = fsSync.createReadStream(file);
         const fileStreamPromise = new Promise((resolve, reject) => {
@@ -616,17 +577,16 @@ class NextcloudClient {
             remoteStream.on('error', e => reject(e)).on('finish', () => resolve());
         });
         fileStream.pipe(remoteStream);
-        // see: https://github.com/nodejs/node/issues/22088
         const timer = setTimeout(() => { }, 20000);
-        await fileStreamPromise;
-        await remoteStreamPromise;
-        // Wait for file to be processed
+        await Promise.all([fileStreamPromise, remoteStreamPromise]);
+        // HACK: Nextcloud has not fully processed the file, despite returning 200.
+        // Waiting for 1s seems to do the trick.
         await new Promise(resolve => setTimeout(resolve, 1000));
         clearTimeout(timer);
         return remoteFilePath;
     }
     async shareFile(remoteFilePath) {
-        const url = this.endpoint + `/ocs/v2.php/apps/files_sharing/api/v1/shares`;
+        const url = `${this.endpoint.href}ocs/v2.php/apps/files_sharing/api/v1/shares`;
         const body = {
             path: remoteFilePath,
             shareType: 3,
@@ -648,7 +608,7 @@ class NextcloudClient {
         core.debug(`Match groups:\n${JSON.stringify(match === null || match === void 0 ? void 0 : match.groups)}`);
         const sharableUrl = ((match === null || match === void 0 ? void 0 : match.groups) || {})['share_url'];
         if (!sharableUrl) {
-            throw new Error('Failed to parse sharable URL.');
+            throw new Error(`Failed to parse or find sharable URL:\n${result}`);
         }
         return sharableUrl;
     }

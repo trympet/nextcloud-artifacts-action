@@ -1,3 +1,4 @@
+import { URL } from 'url'
 import { NoFileOption } from './NoFileOption'
 
 export interface Inputs {
@@ -5,9 +6,7 @@ export interface Inputs {
 
   readonly ArtifactPath: string
 
-  readonly Retention: string
-
-  readonly Endpoint: string
+  readonly Endpoint: URL
 
   readonly Username: string
 
