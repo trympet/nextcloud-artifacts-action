@@ -95,8 +95,16 @@ export class NextcloudArtifact {
       core.info(`Check run URL: ${resp.data.url}`)
       core.info(`Check run HTML: ${resp.data.html_url}`)
     } catch (error) {
+      core.error(error)
+      await this.trySetFailed(createResp.data.id)
+      core.setFailed('Failed to update check')
+    }
+  }
+
+  private async trySetFailed(checkId: number) {
+    try {
       await this.octokit.rest.checks.update({
-        check_run_id: createResp.data.id,
+        check_run_id: checkId,
         conclusion: 'failure',
         status: 'completed',
         output: {
@@ -104,6 +112,10 @@ export class NextcloudArtifact {
         },
         ...github.context.repo
       })
+      return true
+    } catch (error) {
+      core.error(`Failed to update check status to failure`)
+      return false
     }
   }
 
