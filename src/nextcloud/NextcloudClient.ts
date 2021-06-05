@@ -169,7 +169,7 @@ export class NextcloudClient {
     fileStream.pipe(remoteStream)
 
     await new Promise<void>((resolve, reject) => {
-      fileStream.on('error', e => reject(e)).on('finish', () => resolve())
+      fileStream.on('error', e => reject(e)).on('close', () => resolve())
     })
 
     return remoteFilePath
