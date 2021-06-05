@@ -1,43 +1,19 @@
-import * as core from '@actions/core';
-import { NoFileOption } from './NoFileOption';
+import { NoFileOption } from './NoFileOption'
 
-export class Inputs {
-    static get ArtifactName(): string {
-        return core.getInput("name");
-    }
+export interface Inputs {
+  readonly ArtifactName: string
 
-    static get ArtifactPath(): string {
-        return core.getInput("path");
-    }
+  readonly ArtifactPath: string
 
-    static get Retention(): string {
-        return core.getInput("retention-days");
-    }
+  readonly Retention: string
 
-    static get Endpoint(): string {
-        return core.getInput("nextcloud-url");
-    }
+  readonly Endpoint: string
 
-    static get Username(): string {
-        return core.getInput("nextcloud-username");
-    }
+  readonly Username: string
 
-    static get Password(): string {
-        return core.getInput("nextcloud-password");
-    }
+  readonly Password: string
 
-    static get NoFileBehvaior(): NoFileOption {
-        const notFoundAction = core.getInput("if-no-files-found") || NoFileOption.warn;
-        const noFileBehavior: NoFileOption = NoFileOption[notFoundAction as keyof typeof NoFileOption];
+  readonly Token: string
 
-        if (!noFileBehavior) {
-            core.setFailed(
-                `Unrecognized ${"ifNoFilesFound"} input. Provided: ${notFoundAction}. Available options: ${Object.keys(
-                    NoFileOption
-                )}`
-            );
-        }
-
-        return noFileBehavior;
-    }
+  readonly NoFileBehvaior: NoFileOption
 }
