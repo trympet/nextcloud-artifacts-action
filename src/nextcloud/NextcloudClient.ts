@@ -43,8 +43,7 @@ export class NextcloudClient {
 
     core.info('Uploading to Nextcloud...')
     const filePath = await this.upload(zip)
-    core.info(`File path: ${filePath}`)
-    core.info('Sharing file...')
+    core.info(`Remote file path: ${filePath}`)
     return await this.shareFile(filePath)
   }
 
@@ -56,57 +55,25 @@ export class NextcloudClient {
     if (!fsSync.lstatSync(this.rootDirectory).isDirectory()) {
       throw new Error(`this.rootDirectory ${this.rootDirectory} is not a valid directory`)
     }
-    // Normalize and resolve, this allows for either absolute or relative paths to be used
     let root = path.normalize(this.rootDirectory)
     root = path.resolve(root)
-    /*
-           Example to demonstrate behavior
-           
-           Input:
-             artifactName: my-artifact
-             rootDirectory: '/home/user/files/plz-upload'
-             artifactFiles: [
-               '/home/user/files/plz-upload/file1.txt',
-               '/home/user/files/plz-upload/file2.txt',
-               '/home/user/files/plz-upload/dir/file3.txt'
-             ]
-           
-           Output:
-             specifications: [
-               ['/home/user/files/plz-upload/file1.txt', 'my-artifact/file1.txt'],
-               ['/home/user/files/plz-upload/file1.txt', 'my-artifact/file2.txt'],
-               ['/home/user/files/plz-upload/file1.txt', 'my-artifact/dir/file3.txt']
-             ]
-        */
     for (let file of files) {
       if (!fsSync.existsSync(file)) {
         throw new Error(`File ${file} does not exist`)
       }
       if (!fsSync.lstatSync(file).isDirectory()) {
-        // Normalize and resolve, this allows for either absolute or relative paths to be used
         file = path.normalize(file)
         file = path.resolve(file)
         if (!file.startsWith(root)) {
           throw new Error(`The rootDirectory: ${root} is not a parent directory of the file: ${file}`)
         }
-        // Check for forbidden characters in file paths that will be rejected during upload
+
         const uploadPath = file.replace(root, '')
-        /*
-                  uploadFilePath denotes where the file will be uploaded in the file container on the server. During a run, if multiple artifacts are uploaded, they will all
-                  be saved in the same container. The artifact name is used as the root directory in the container to separate and distinguish uploaded artifacts
-          
-                  path.join handles all the following cases and would return 'artifact-name/file-to-upload.txt
-                    join('artifact-name/', 'file-to-upload.txt')
-                    join('artifact-name/', '/file-to-upload.txt')
-                    join('artifact-name', 'file-to-upload.txt')
-                    join('artifact-name', '/file-to-upload.txt')
-                */
         specifications.push({
           absolutePath: file,
           uploadPath: path.join(this.artifact, uploadPath)
         })
       } else {
-        // Directories are rejected by the server during upload
         core.debug(`Removing ${file} from rawSearchResults because it is a directory`)
       }
     }
@@ -133,7 +100,6 @@ export class NextcloudClient {
 
     const archivePath = path.join(artifactPath, `${this.artifact}.zip`)
     await this.zip(path.join(artifactPath, this.artifact), archivePath)
-    core.info(`archive stat: ${(await fs.stat(archivePath)).size}`)
 
     return archivePath
   }
@@ -151,14 +117,12 @@ export class NextcloudClient {
 
   private async upload(file: string): Promise<string> {
     const remoteFileDir = `/artifacts/${this.guid}`
-    core.info('Checking directory...')
     if (!(await this.davClient.exists(remoteFileDir))) {
-      core.info('Creating directory...')
       await this.davClient.createDirectory(remoteFileDir, { recursive: true })
     }
 
     const remoteFilePath = `${remoteFileDir}/${this.artifact}.zip`
-    core.info(`Transferring file... (${file})`)
+    core.debug(`Transferring file... (${file})`)
 
     const fileStat = await fs.stat(file)
     const fileStream = fsSync.createReadStream(file)
@@ -174,11 +138,11 @@ export class NextcloudClient {
 
     fileStream.pipe(remoteStream)
 
-    // see: https://github.com/nodejs/node/issues/22088
     const timer = setTimeout(() => {}, 20_000);
-    await fileStreamPromise
-    await remoteStreamPromise
-    // Wait for file to be processed
+    await Promise.all([fileStreamPromise, remoteStreamPromise])
+
+    // HACK: Nextcloud has not fully processed the file, despite returning 200.
+    // Waiting for 1s seems to do the trick.
     await new Promise(resolve => setTimeout(resolve, 1_000));
 
     clearTimeout(timer);

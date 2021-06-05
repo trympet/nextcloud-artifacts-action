@@ -65,8 +65,8 @@ export class NextcloudArtifact {
       name: 'Nextcloud Artifacts',
       status: 'in_progress',
       output: {
-        title: 'Nextcloud Artifacts',
-        summary: ''
+        title: `Nextcloud (${this.name})`,
+        summary: 'Uploading...'
       },
       ...github.context.repo
     })
@@ -81,13 +81,14 @@ export class NextcloudArtifact {
 
     try {
       const shareableUrl = await client.uploadFiles(files.filesToUpload)
+      core.info(`Nextcloud shareable URL: ${shareableUrl}`)
       const resp = await this.octokit.rest.checks.update({
         check_run_id: createResp.data.id,
         conclusion: 'success',
         status: 'completed',
         output: {
-          title: 'Nextcloud Artifacts',
-          summary: `${this.name}: ${shareableUrl}`
+          title: `Nextcloud (${this.name})`,
+          summary: shareableUrl
         },
         ...github.context.repo
       })
@@ -95,9 +96,8 @@ export class NextcloudArtifact {
       core.info(`Check run URL: ${resp.data.url}`)
       core.info(`Check run HTML: ${resp.data.html_url}`)
     } catch (error) {
-      core.error(error)
       await this.trySetFailed(createResp.data.id)
-      core.setFailed('Failed to update check')
+      core.setFailed(error)
     }
   }
 
@@ -108,7 +108,7 @@ export class NextcloudArtifact {
         conclusion: 'failure',
         status: 'completed',
         output: {
-          title: 'Nextcloud Artifacts',
+          title: `Nextcloud (${this.name})`,
           summary: 'Check failed.'
         },
         ...github.context.repo
