@@ -1,6 +1,6 @@
 import * as core from '@actions/core'
-import {NoFileOption} from './NoFileOption'
-import {Inputs} from './Inputs'
+import { NoFileOption } from './NoFileOption'
+import { Inputs } from './Inputs'
 
 export class ActionInputs implements Inputs {
   get ArtifactName(): string {

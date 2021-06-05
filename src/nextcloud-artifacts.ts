@@ -1,6 +1,6 @@
-import {NextcloudArtifact} from './nextcloud/NextcloudArtifact'
+import { NextcloudArtifact } from './nextcloud/NextcloudArtifact'
 import * as core from '@actions/core'
-import {ActionInputs} from './ActionInputs'
+import { ActionInputs } from './ActionInputs'
 
 async function run() {
   try {
