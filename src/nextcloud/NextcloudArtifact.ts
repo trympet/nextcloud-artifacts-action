@@ -12,12 +12,14 @@ export class NextcloudArtifact {
   readonly context = NextcloudArtifact.getCheckRunContext()
   readonly token: string
   readonly name: string
+  readonly artifactTitle: string
   readonly path: string
   readonly errorBehavior: NoFileOption
 
   constructor(private inputs: Inputs) {
     this.token = inputs.Token
     this.name = inputs.ArtifactName
+    this.artifactTitle = `Nextcloud - ${this.name}`
     this.path = inputs.ArtifactPath
     this.errorBehavior = inputs.NoFileBehvaior
     this.name = inputs.ArtifactName
@@ -62,10 +64,10 @@ export class NextcloudArtifact {
     this.logUpload(files.filesToUpload.length, files.rootDirectory)
     const createResp = await this.octokit.rest.checks.create({
       head_sha: this.context.sha,
-      name: 'Nextcloud Artifacts',
+      name: this.artifactTitle,
       status: 'in_progress',
       output: {
-        title: `Nextcloud (${this.name})`,
+        title: `Nextcloud - ${this.name}`,
         summary: 'Uploading...'
       },
       ...github.context.repo
@@ -87,7 +89,7 @@ export class NextcloudArtifact {
         conclusion: 'success',
         status: 'completed',
         output: {
-          title: `Nextcloud (${this.name})`,
+          title: this.artifactTitle,
           summary: shareableUrl
         },
         ...github.context.repo
@@ -108,7 +110,7 @@ export class NextcloudArtifact {
         conclusion: 'failure',
         status: 'completed',
         output: {
-          title: `Nextcloud (${this.name})`,
+          title: this.artifactTitle,
           summary: 'Check failed.'
         },
         ...github.context.repo
