@@ -16,7 +16,7 @@ export class NextcloudArtifact {
   readonly errorBehavior: NoFileOption
 
   constructor(private inputs: Inputs) {
-    this.token = inputs.Token;
+    this.token = inputs.Token
     this.name = inputs.ArtifactName
     this.path = inputs.ArtifactPath
     this.errorBehavior = inputs.NoFileBehvaior

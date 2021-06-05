@@ -138,14 +138,14 @@ export class NextcloudClient {
 
     fileStream.pipe(remoteStream)
 
-    const timer = setTimeout(() => {}, 20_000);
+    const timer = setTimeout(() => {}, 20_000)
     await Promise.all([fileStreamPromise, remoteStreamPromise])
 
     // HACK: Nextcloud has not fully processed the file, despite returning 200.
     // Waiting for 1s seems to do the trick.
-    await new Promise(resolve => setTimeout(resolve, 1_000));
+    await new Promise(resolve => setTimeout(resolve, 1_000))
 
-    clearTimeout(timer);
+    clearTimeout(timer)
     return remoteFilePath
   }
 
