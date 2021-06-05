@@ -12,5 +12,5 @@
     "sourceMap": true,
     "lib": ["ES2019"]
   },
-  "exclude": ["node_modules", "**/*.test.ts"]
+  "exclude": ["node_modules", "__tests__/**/*.ts"]
 }
