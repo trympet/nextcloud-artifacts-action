@@ -613,6 +613,9 @@ class NextcloudClient {
         await new Promise((resolve, reject) => {
             fileStream.on('error', e => reject(e)).on('close', () => resolve());
         });
+        await new Promise((resolve, reject) => {
+            remoteStream.on('error', e => reject(e)).on('close', () => resolve());
+        });
         return remoteFilePath;
     }
     async shareFile(remoteFilePath) {

@@ -172,6 +172,10 @@ export class NextcloudClient {
       fileStream.on('error', e => reject(e)).on('close', () => resolve())
     })
 
+    await new Promise<void>((resolve, reject) => {
+      remoteStream.on('error', e => reject(e)).on('close', () => resolve())
+    })
+
     return remoteFilePath
   }
 
