@@ -486,7 +486,8 @@ class NextcloudClient {
         this.headers = { Authorization: 'Basic ' + Buffer.from(`${this.username}:${this.password}`).toString('base64') };
         this.davClient = webdav.createClient(`${this.endpoint.href}remote.php/dav/files/${this.username}`, {
             username: this.username,
-            password: this.password
+            password: this.password,
+            maxBodyLength: 1024 ** 3
         });
     }
     async uploadFiles(files) {
