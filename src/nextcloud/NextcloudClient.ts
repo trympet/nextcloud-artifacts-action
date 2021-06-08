@@ -29,7 +29,7 @@ export class NextcloudClient {
     private password: string
   ) {
     this.guid = uuidv4()
-    this.headers = { Authorization: 'Basic ' + btoa(`${this.username}:${this.password}`) }
+    this.headers = { Authorization: 'Basic ' + Buffer.from(`${this.username}:${this.password}`).toString('base64') }
     this.davClient = webdav.createClient(`${this.endpoint.href}remote.php/dav/files/${this.username}`, {
       username: this.username,
       password: this.password
@@ -125,28 +125,8 @@ export class NextcloudClient {
     const remoteFilePath = `${remoteFileDir}/${this.artifact}.zip`
     core.debug(`Transferring file... (${file})`)
 
-    const fileStat = await fs.stat(file)
-    const fileStream = fsSync.createReadStream(file)
-    const fileStreamPromise = new Promise<void>((resolve, reject) => {
-      fileStream.on('error', e => reject(e)).on('close', () => resolve())
-    })
-    const remoteStream = this.davClient.createWriteStream(remoteFilePath, {
-      headers: { 'Content-Length': fileStat.size.toString() }
-    })
-    const remoteStreamPromise = new Promise<void>((resolve, reject) => {
-      remoteStream.on('error', e => reject(e)).on('finish', () => resolve())
-    })
+    await this.davClient.putFileContents(remoteFilePath, await fs.readFile(file));
 
-    fileStream.pipe(remoteStream)
-
-    const timer = setTimeout(() => {}, 20_000)
-    await Promise.all([fileStreamPromise, remoteStreamPromise])
-
-    // HACK: Nextcloud has not fully processed the file, despite returning 200.
-    // Waiting for 1s seems to do the trick.
-    await new Promise(resolve => setTimeout(resolve, 1_000))
-
-    clearTimeout(timer)
     return remoteFilePath
   }
 
