@@ -42,11 +42,15 @@ export class NextcloudClient {
     const spec = this.uploadSpec(files)
     core.info('Zipping files...')
     const zip = await this.zipFiles(spec)
-
-    core.info('Uploading to Nextcloud...')
-    const filePath = await this.upload(zip)
-    core.info(`Remote file path: ${filePath}`)
-    return await this.shareFile(filePath)
+    try {
+      core.info('Uploading to Nextcloud...')
+      const filePath = await this.upload(zip)
+      core.info(`Remote file path: ${filePath}`)
+      return await this.shareFile(filePath)
+    }
+    finally {
+      await fs.unlink(zip)
+    }
   }
 
   private uploadSpec(files: string[]): FileSpec[] {
