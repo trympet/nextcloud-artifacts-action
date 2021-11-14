@@ -367,6 +367,7 @@ class NextcloudArtifact {
         const client = new NextcloudClient_1.NextcloudClient(this.inputs.Endpoint, this.name, files.rootDirectory, this.inputs.Username, this.inputs.Password);
         try {
             const shareableUrl = await client.uploadFiles(files.filesToUpload);
+            core.setOutput('SHAREABLE_URL', shareableUrl);
             core.info(`Nextcloud shareable URL: ${shareableUrl}`);
             const resp = await this.octokit.rest.checks.update({
                 check_run_id: createResp.data.id,
@@ -495,10 +496,15 @@ class NextcloudClient {
         const spec = this.uploadSpec(files);
         core.info('Zipping files...');
         const zip = await this.zipFiles(spec);
-        core.info('Uploading to Nextcloud...');
-        const filePath = await this.upload(zip);
-        core.info(`Remote file path: ${filePath}`);
-        return await this.shareFile(filePath);
+        try {
+            core.info('Uploading to Nextcloud...');
+            const filePath = await this.upload(zip);
+            core.info(`Remote file path: ${filePath}`);
+            return await this.shareFile(filePath);
+        }
+        finally {
+            await fs.unlink(zip);
+        }
     }
     uploadSpec(files) {
         const specifications = [];
