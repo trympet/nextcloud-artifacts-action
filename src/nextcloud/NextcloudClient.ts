@@ -47,8 +47,7 @@ export class NextcloudClient {
       const filePath = await this.upload(zip)
       core.info(`Remote file path: ${filePath}`)
       return await this.shareFile(filePath)
-    }
-    finally {
+    } finally {
       await fs.unlink(zip)
     }
   }
@@ -130,7 +129,7 @@ export class NextcloudClient {
     const remoteFilePath = `${remoteFileDir}/${this.artifact}.zip`
     core.debug(`Transferring file... (${file})`)
 
-    await this.davClient.putFileContents(remoteFilePath, await fs.readFile(file));
+    await this.davClient.putFileContents(remoteFilePath, await fs.readFile(file))
 
     return remoteFilePath
   }
