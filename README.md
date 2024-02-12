@@ -1,5 +1,5 @@
 # Nextcloud Artifact Upload Action
-Upload artifacts to nextcloud and outputs a shareable URL.
+Upload artifacts to nextcloud and output a shareable URL.
 
 ### How it looks:
 ![image](https://user-images.githubusercontent.com/23460729/120891750-7f247380-c60a-11eb-9998-3b3b7f61066f.png)
@@ -23,7 +23,7 @@ jobs:
         with:
           name: 'my-artifact'                                   # Name of the artifact
           path: 'bin/**/*.exe'                                  # Globbing supported
-          nextcloud-url: 'https://nextcloud.example.com'        # Format of test results
+          nextcloud-url: 'https://nextcloud.example.com'        # Nextcloud URL
           nextcloud-username: ${{ secrets.NEXTCLOUD_USERNAME }} # Username from repository secret
           nextcloud-password: ${{ secrets.NEXTCLOUD_PASSWORD }} # Password from repository secret
 ```
