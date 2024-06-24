@@ -17,6 +17,10 @@ inputs:
   nextcloud-password:
     description: 'The password for the nextcloud user'
     required: true
+  no-zip:
+    description: 'Whether to zip files. Incompatible with uploading multiple files.'
+    default: false
+    required: false
   if-no-files-found:
     description: >
       The desired behavior if no files are found using the provided path.

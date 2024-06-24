@@ -32,6 +32,10 @@ export class ActionInputs implements Inputs {
     return token
   }
 
+  get NoZip(): boolean {
+    return Boolean(core.getInput('no-zip', { required: false }))
+  }
+
   get NoFileBehvaior(): NoFileOption {
     const notFoundAction = core.getInput('if-no-files-found', { required: false }) || NoFileOption.warn
     const noFileBehavior = Object.values(NoFileOption).find(option => option === notFoundAction)
