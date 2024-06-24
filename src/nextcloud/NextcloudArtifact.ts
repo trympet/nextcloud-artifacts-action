@@ -84,6 +84,7 @@ export class NextcloudArtifact {
     try {
       const shareableUrl = await client.uploadFiles(files.filesToUpload)
       core.setOutput('SHAREABLE_URL', shareableUrl)
+      core.setOutput('DIRECT_SHAREABLE_URL', `${shareableUrl}/download`)
       core.info(`Nextcloud shareable URL: ${shareableUrl}`)
       const resp = await this.octokit.rest.checks.update({
         check_run_id: createResp.data.id,
