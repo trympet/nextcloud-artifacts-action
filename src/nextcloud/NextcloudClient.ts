@@ -55,7 +55,8 @@ export class NextcloudClient {
       core.info(`Remote file path: ${filePath}`)
       return await this.shareFile(filePath)
     } finally {
-      await fs.unlink(zip)
+      // Don't delete user-made files
+      if (!this.nozip) await fs.unlink(zip)
     }
   }
 
