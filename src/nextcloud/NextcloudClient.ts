@@ -39,26 +39,26 @@ export class NextcloudClient {
   async uploadFiles(files: string[]): Promise<string> {
     core.info('Preparing upload...')
     const spec = this.uploadSpec(files)
-    let file: string
-    if (this.noZip) {
-      if (spec.length !== 1) {
-        throw new Error('The no-zip input requires exactly one matching file.')
-      }
-      file = spec[0].absolutePath
-    } else {
-      core.info('Zipping files...')
-      file = await this.zipFiles(spec)
+    if (this.noZip && spec.length !== 1) {
+      throw new Error('The no-zip input requires exactly one matching file.')
     }
 
+    const tempDir = path.join(os.tmpdir(), this.guid)
     try {
+      let file: string
+      if (this.noZip) {
+        file = spec[0].absolutePath
+      } else {
+        core.info('Zipping files...')
+        file = await this.zipFiles(spec, tempDir)
+      }
+
       core.info('Uploading to Nextcloud...')
       const filePath = await this.upload(file)
       core.info(`Remote file path: ${filePath}`)
       return await this.shareFile(filePath)
     } finally {
-      if (!this.noZip) {
-        await fs.unlink(file)
-      }
+      await fs.rm(tempDir, { recursive: true, force: true })
     }
   }
 
@@ -95,8 +95,7 @@ export class NextcloudClient {
     return specifications
   }
 
-  private async zipFiles(specs: FileSpec[]): Promise<string> {
-    const tempArtifactDir = path.join(os.tmpdir(), this.guid)
+  private async zipFiles(specs: FileSpec[], tempArtifactDir: string): Promise<string> {
     const artifactPath = path.join(tempArtifactDir, `artifact-${this.artifact}`)
     await fs.mkdir(path.join(artifactPath, this.artifact), { recursive: true })
     const copies = []
