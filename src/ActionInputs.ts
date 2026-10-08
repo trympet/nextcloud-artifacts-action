@@ -33,7 +33,7 @@ export class ActionInputs implements Inputs {
   }
 
   get NoZip(): boolean {
-    return Boolean(core.getInput('no-zip', { required: false }))
+    return core.getInput('no-zip') ? core.getBooleanInput('no-zip') : false
   }
 
   get NoFileBehvaior(): NoFileOption {

@@ -57242,6 +57242,9 @@ class ActionInputs {
         _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .setSecret */ .Pq(token);
         return token;
     }
+    get NoZip() {
+        return _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .getInput */ .V4('no-zip') ? _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .getBooleanInput */ .Vt('no-zip') : false;
+    }
     get NoFileBehvaior() {
         const notFoundAction = _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .getInput */ .V4('if-no-files-found', { required: false }) || _NoFileOption_js__WEBPACK_IMPORTED_MODULE_1__/* .NoFileOption */ .z.warn;
         const noFileBehavior = Object.values(_NoFileOption_js__WEBPACK_IMPORTED_MODULE_1__/* .NoFileOption */ .z).find(option => option === notFoundAction);
@@ -84849,15 +84852,17 @@ class NextcloudClient {
     rootDirectory;
     username;
     password;
+    noZip;
     guid;
     headers;
     davClient;
-    constructor(endpoint, artifact, rootDirectory, username, password) {
+    constructor(endpoint, artifact, rootDirectory, username, password, noZip = false) {
         this.endpoint = endpoint;
         this.artifact = artifact;
         this.rootDirectory = rootDirectory;
         this.username = username;
         this.password = password;
+        this.noZip = noZip;
         this.guid = (0,external_node_crypto_.randomUUID)();
         this.headers = { Authorization: 'Basic ' + Buffer.from(`${this.username}:${this.password}`).toString('base64') };
         this.davClient = createClient(`${this.endpoint.href}remote.php/dav/files/${this.username}`, {
@@ -84868,16 +84873,27 @@ class NextcloudClient {
     async uploadFiles(files) {
         lib_core/* info */.pq('Preparing upload...');
         const spec = this.uploadSpec(files);
-        lib_core/* info */.pq('Zipping files...');
-        const zip = await this.zipFiles(spec);
+        let file;
+        if (this.noZip) {
+            if (spec.length !== 1) {
+                throw new Error('The no-zip input requires exactly one matching file.');
+            }
+            file = spec[0].absolutePath;
+        }
+        else {
+            lib_core/* info */.pq('Zipping files...');
+            file = await this.zipFiles(spec);
+        }
         try {
             lib_core/* info */.pq('Uploading to Nextcloud...');
-            const filePath = await this.upload(zip);
+            const filePath = await this.upload(file);
             lib_core/* info */.pq(`Remote file path: ${filePath}`);
             return await this.shareFile(filePath);
         }
         finally {
-            await NextcloudClient_fs.unlink(zip);
+            if (!this.noZip) {
+                await NextcloudClient_fs.unlink(file);
+            }
         }
     }
     uploadSpec(files) {
@@ -84939,16 +84955,25 @@ class NextcloudClient {
         await Promise.all([completion, archive.finalize()]);
     }
     async upload(file) {
-        if ((await NextcloudClient_fs.stat(file)).size > 1024 ** 3) {
-            throw new Error('Artifact exceeds the 1 GiB upload limit');
+        const stats = await NextcloudClient_fs.stat(file);
+        if (!stats.isFile()) {
+            throw new Error(`Upload source must be a regular file: ${file}`);
         }
         const remoteFileDir = `/artifacts/${this.guid}`;
         if (!(await this.davClient.exists(remoteFileDir))) {
             await this.davClient.createDirectory(remoteFileDir, { recursive: true });
         }
-        const remoteFilePath = `${remoteFileDir}/${this.artifact}.zip`;
+        const remoteFilePath = `${remoteFileDir}/${this.artifact}${this.noZip ? '' : '.zip'}`;
         lib_core/* debug */.Yz(`Transferring file... (${file})`);
-        await this.davClient.putFileContents(remoteFilePath, await NextcloudClient_fs.readFile(file));
+        const stream = external_node_fs_.createReadStream(file);
+        try {
+            await this.davClient.putFileContents(remoteFilePath, stream, {
+                headers: { 'Content-Length': String(stats.size) }
+            });
+        }
+        finally {
+            await stream[Symbol.asyncDispose]();
+        }
         return remoteFilePath;
     }
     async shareFile(remoteFilePath) {
@@ -85001,6 +85026,7 @@ class NextcloudArtifact {
     artifactTitle;
     path;
     errorBehavior;
+    noZip;
     constructor(inputs) {
         this.inputs = inputs;
         this.token = inputs.Token;
@@ -85008,6 +85034,7 @@ class NextcloudArtifact {
         this.artifactTitle = `Nextcloud - ${this.name}`;
         this.path = inputs.ArtifactPath;
         this.errorBehavior = inputs.NoFileBehvaior;
+        this.noZip = inputs.NoZip;
         this.name = inputs.ArtifactName;
         this.octokit = getOctokit(this.token);
     }
@@ -85053,10 +85080,13 @@ class NextcloudArtifact {
             },
             ...github_context.repo
         });
-        const client = new NextcloudClient(this.inputs.Endpoint, this.name, files.rootDirectory, this.inputs.Username, this.inputs.Password);
+        const client = new NextcloudClient(this.inputs.Endpoint, this.name, files.rootDirectory, this.inputs.Username, this.inputs.Password, this.noZip);
         try {
             const shareableUrl = await client.uploadFiles(files.filesToUpload);
+            const directShareableUrl = new URL(shareableUrl);
+            directShareableUrl.pathname = `${directShareableUrl.pathname.replace(/\/+$/, '')}/download`;
             lib_core/* setOutput */.uH('SHAREABLE_URL', shareableUrl);
+            lib_core/* setOutput */.uH('DIRECT_SHAREABLE_URL', directShareableUrl.toString());
             lib_core/* info */.pq(`Nextcloud shareable URL: ${shareableUrl}`);
             const resp = await this.octokit.rest.checks.update({
                 check_run_id: createResp.data.id,
@@ -85134,6 +85164,7 @@ class NextcloudArtifact {
 __nccwpck_require__.d(__webpack_exports__, {
   Yz: () => (/* binding */ core_debug),
   z3: () => (/* binding */ error),
+  Vt: () => (/* binding */ getBooleanInput),
   V4: () => (/* binding */ getInput),
   pq: () => (/* binding */ info),
   C1: () => (/* binding */ setFailed),
@@ -85142,7 +85173,7 @@ __nccwpck_require__.d(__webpack_exports__, {
   $e: () => (/* binding */ warning)
 });
 
-// UNUSED EXPORTS: ExitCode, addPath, endGroup, exportVariable, getBooleanInput, getIDToken, getMultilineInput, getState, group, isDebug, markdownSummary, notice, platform, saveState, setCommandEcho, startGroup, summary, toPlatformPath, toPosixPath, toWin32Path
+// UNUSED EXPORTS: ExitCode, addPath, endGroup, exportVariable, getIDToken, getMultilineInput, getState, group, isDebug, markdownSummary, notice, platform, saveState, setCommandEcho, startGroup, summary, toPlatformPath, toPosixPath, toWin32Path
 
 // EXTERNAL MODULE: external "os"
 var external_os_ = __nccwpck_require__(857);

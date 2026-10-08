@@ -14,6 +14,7 @@ export class NextcloudArtifact {
   readonly artifactTitle: string
   readonly path: string
   readonly errorBehavior: NoFileOption
+  readonly noZip: boolean
 
   constructor(private inputs: Inputs) {
     this.token = inputs.Token
@@ -21,6 +22,7 @@ export class NextcloudArtifact {
     this.artifactTitle = `Nextcloud - ${this.name}`
     this.path = inputs.ArtifactPath
     this.errorBehavior = inputs.NoFileBehvaior
+    this.noZip = inputs.NoZip
     this.name = inputs.ArtifactName
     this.octokit = github.getOctokit(this.token)
   }
@@ -78,13 +80,15 @@ export class NextcloudArtifact {
       files.rootDirectory,
       this.inputs.Username,
       this.inputs.Password,
-      this.inputs.NoZip
+      this.noZip
     )
 
     try {
       const shareableUrl = await client.uploadFiles(files.filesToUpload)
+      const directShareableUrl = new URL(shareableUrl)
+      directShareableUrl.pathname = `${directShareableUrl.pathname.replace(/\/+$/, '')}/download`
       core.setOutput('SHAREABLE_URL', shareableUrl)
-      core.setOutput('DIRECT_SHAREABLE_URL', `${shareableUrl}/download`)
+      core.setOutput('DIRECT_SHAREABLE_URL', directShareableUrl.toString())
       core.info(`Nextcloud shareable URL: ${shareableUrl}`)
       const resp = await this.octokit.rest.checks.update({
         check_run_id: createResp.data.id,

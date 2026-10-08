@@ -14,7 +14,7 @@ export interface Inputs {
 
   readonly Token: string
 
-  readonly NoFileBehvaior: NoFileOption
-
   readonly NoZip: boolean
+
+  readonly NoFileBehvaior: NoFileOption
 }
