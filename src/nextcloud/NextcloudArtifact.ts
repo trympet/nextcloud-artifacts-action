@@ -1,14 +1,13 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import { GitHub } from '@actions/github/lib/utils'
 
-import { FileFinder } from '../FileFinder'
-import { Inputs } from '../Inputs'
-import { NextcloudClient } from './NextcloudClient'
-import { NoFileOption } from '../NoFileOption'
+import { FileFinder } from '../FileFinder.js'
+import type { Inputs } from '../Inputs.js'
+import { NextcloudClient } from './NextcloudClient.js'
+import { NoFileOption } from '../NoFileOption.js'
 
 export class NextcloudArtifact {
-  readonly octokit: InstanceType<typeof GitHub>
+  readonly octokit: ReturnType<typeof github.getOctokit>
   readonly context = NextcloudArtifact.getCheckRunContext()
   readonly token: string
   readonly name: string
@@ -100,7 +99,7 @@ export class NextcloudArtifact {
       core.info(`Check run HTML: ${resp.data.html_url}`)
     } catch (error) {
       await this.trySetFailed(createResp.data.id)
-      core.setFailed(error)
+      throw error
     }
   }
 
@@ -118,7 +117,7 @@ export class NextcloudArtifact {
       })
       return true
     } catch (error) {
-      core.error(`Failed to update check status to failure`)
+      core.error(`Failed to update check status to failure: ${error instanceof Error ? error.message : String(error)}`)
       return false
     }
   }

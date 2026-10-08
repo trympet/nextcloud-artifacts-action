@@ -1,8 +1,8 @@
 import * as glob from '@actions/glob'
-import { stat } from 'fs'
+import { stat } from 'node:fs'
 import { debug, info } from '@actions/core'
-import * as path from 'path'
-import { promisify } from 'util'
+import * as path from 'node:path'
+import { promisify } from 'node:util'
 const stats = promisify(stat)
 
 export class FileFinder {
@@ -14,7 +14,10 @@ export class FileFinder {
 
   private globOptions: glob.GlobOptions
 
-  constructor(private searchPath: string, globOptions?: glob.GlobOptions) {
+  constructor(
+    private searchPath: string,
+    globOptions?: glob.GlobOptions
+  ) {
     this.globOptions = globOptions || FileFinder.DefaultGlobOptions
   }
 

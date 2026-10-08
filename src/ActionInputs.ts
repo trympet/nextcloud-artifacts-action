@@ -1,7 +1,7 @@
 import * as core from '@actions/core'
-import { NoFileOption } from './NoFileOption'
-import { Inputs } from './Inputs'
-import { URL } from 'url'
+import { NoFileOption } from './NoFileOption.js'
+import type { Inputs } from './Inputs.js'
+import { URL } from 'node:url'
 
 export class ActionInputs implements Inputs {
   get ArtifactName(): string {
@@ -21,20 +21,24 @@ export class ActionInputs implements Inputs {
   }
 
   get Password(): string {
-    return core.getInput('nextcloud-password', { required: true })
+    const password = core.getInput('nextcloud-password', { required: true })
+    core.setSecret(password)
+    return password
   }
 
   get Token(): string {
-    return core.getInput('token', { required: true })
+    const token = core.getInput('token', { required: true })
+    core.setSecret(token)
+    return token
   }
 
   get NoFileBehvaior(): NoFileOption {
     const notFoundAction = core.getInput('if-no-files-found', { required: false }) || NoFileOption.warn
-    const noFileBehavior: NoFileOption = NoFileOption[notFoundAction as keyof typeof NoFileOption]
+    const noFileBehavior = Object.values(NoFileOption).find(option => option === notFoundAction)
 
     if (!noFileBehavior) {
-      core.setFailed(
-        `Unrecognized ${'ifNoFilesFound'} input. Provided: ${notFoundAction}. Available options: ${Object.keys(
+      throw new Error(
+        `Unrecognized if-no-files-found input. Provided: ${notFoundAction}. Available options: ${Object.keys(
           NoFileOption
         )}`
       )
