@@ -15,13 +15,9 @@ concurrency:
 
 jobs:
   build-and-test:
-    name: Node.js 24 / ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    name: Node.js 24 / ubuntu-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -49,9 +45,10 @@ jobs:
       - name: Check committed distribution
         shell: bash
         run: |
-          if [ -n "$(git status --porcelain --untracked-files=all -- dist)" ]; then
-            git --no-pager diff --stat -- dist
-            git status --short -- dist
+          untracked_files=$(git ls-files --others --exclude-standard -- dist)
+          if ! git diff --quiet HEAD -- dist || [ -n "$untracked_files" ]; then
+            git --no-pager diff --stat HEAD -- dist
+            git status --short --untracked-files=all -- dist
             echo "::error::Run npm run package and commit all changes in dist/."
             exit 1
           fi

@@ -85,9 +85,9 @@ GitHub and Nextcloud test servers; it does not require secrets or a real Nextclo
 server. To recompile without running tests, use `npm run package`.
 
 Commit all generated files in `dist/`, including per-bundle license notices, with
-source or dependency changes. CI checks
-formatting, linting, the build, behavior, and bundle freshness on Linux, Windows,
-and macOS. Dependabot checks npm dependencies and pinned workflow actions weekly.
+source or dependency changes. CI checks formatting, linting, the build, behavior,
+and bundle freshness on Ubuntu. Dependabot checks npm dependencies and pinned
+workflow actions weekly.
 
 The live integration test is opt-in: run `npm run test:integration` with
 `ARTIFACT_NAME`, `ARTIFACT_PATH`, `ENDPOINT`, `USERNAME`, `PASSWORD`, `TOKEN`,
