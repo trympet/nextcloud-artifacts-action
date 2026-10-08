@@ -1,6 +1,6 @@
 {
   "name": "nextcloud-artifacts-action",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "Upload build artifacts to Nextcloud from GitHub Actions.",
   "private": true,
   "type": "module",

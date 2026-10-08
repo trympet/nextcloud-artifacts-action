@@ -4,10 +4,12 @@ Upload artifacts to Nextcloud and output a shareable URL.
 
 ## Requirements
 
-This action uses Node.js 24, the newest JavaScript action runtime supported by
+Version 3 uses Node.js 24, the newest JavaScript action runtime supported by
 [GitHub Actions](https://docs.github.com/en/actions/reference/workflows-and-actions/metadata-syntax#runsusing-for-javascript-actions).
 Self-hosted runners must be version **2.327.1 or newer**. The runner supplies Node.js;
 consumers do not need a `setup-node` step to use this action.
+
+When upgrading from `@v2`, update older self-hosted runners before switching to `@v3`.
 
 The GitHub token needs `checks: write` to publish the artifact's check run. Store the
 Nextcloud credentials in repository or environment secrets, and use a Nextcloud app
@@ -47,7 +49,7 @@ jobs:
           github.actor != 'dependabot[bot]' &&
           (github.event_name != 'pull_request' ||
           github.event.pull_request.head.repo.full_name == github.repository)
-        uses: trympet/nextcloud-artifacts-action@v2
+        uses: trympet/nextcloud-artifacts-action@v3
         with:
           name: 'my-artifact'
           path: 'bin/**/*.exe'
