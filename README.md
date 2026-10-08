@@ -13,8 +13,7 @@ The GitHub token needs `checks: write` to publish the artifact's check run. Stor
 Nextcloud credentials in repository or environment secrets, and use a Nextcloud app
 password where possible. The resulting share is public and read-only; only upload
 files intended to be shared publicly.
-ZIP and uncompressed uploads are streamed without an action-imposed size cap.
-Nextcloud quotas and server or reverse-proxy upload limits still apply.
+Uploads are streamed without an action-imposed size cap; server quotas and upload limits still apply.
 
 ## How it looks
 
@@ -62,33 +61,11 @@ The example skips uploads on fork and Dependabot pull requests, which do not
 receive the required secrets or a writable token. Do not use `pull_request_target`
 to run untrusted pull-request code with secrets.
 
-## Uncompressed uploads
-
-By default, matching files are packaged as a ZIP. To upload a single file unchanged,
-add `no-zip: 'true'` to the example's inputs and set `name` to the desired remote
-filename, including its extension:
-
-```yaml
-with:
-  name: 'my-app.exe'
-  path: 'bin/my-app.exe'
-  no-zip: 'true'
-  nextcloud-url: 'https://nextcloud.example.com'
-  nextcloud-username: ${{ secrets.NEXTCLOUD_USERNAME }}
-  nextcloud-password: ${{ secrets.NEXTCLOUD_PASSWORD }}
-```
-
-With `no-zip: 'true'`, multiple matching files fail the action. A directory or glob
-is allowed if it selects exactly one file. No matches still follow
-`if-no-files-found`. The original local file is never removed, including on upload
-failure. Omitting `no-zip` or setting it to `'false'` preserves ZIP uploads.
-
 ## Output
 
-`steps.artifact.outputs.SHAREABLE_URL` contains the public URL after a successful
-upload. `steps.artifact.outputs.DIRECT_SHAREABLE_URL` contains the direct-download
-URL in either upload mode. No output is produced when there are no matching files. The
-`if-no-files-found` input accepts `warn` (default), `error`, or `ignore`.
+`SHAREABLE_URL` links to the share page; `DIRECT_SHAREABLE_URL` links to the download.
+Access them via `steps.artifact.outputs.<name>`. No matches produce no output;
+`if-no-files-found` accepts `warn` (default), `error`, or `ignore`.
 
 ## Development
 
@@ -116,4 +93,4 @@ The live integration test is opt-in: run `npm run test:integration` with
 `ARTIFACT_NAME`, `ARTIFACT_PATH`, `ENDPOINT`, `USERNAME`, `PASSWORD`, `TOKEN`,
 `GITHUB_REPOSITORY`, `GITHUB_SHA`, and `GITHUB_RUN_ID` set in the environment or an
 untracked `.env` file. It uploads to the configured Nextcloud server and creates a
-real GitHub check run. Set `NO_ZIP=true` to exercise a single uncompressed upload.
+real GitHub check run (`NO_ZIP=true` enables uncompressed uploads).
