@@ -1,7 +1,7 @@
 name: 'Upload a Build Artifact to Nextcloud'
 description: 'Upload a build artifact to Nextcloud that can be used by subsequent workflow steps'
 author: 'Trym Lund Flogard'
-inputs: 
+inputs:
   name:
     description: 'Artifact name'
     default: 'artifact'
@@ -29,6 +29,9 @@ inputs:
     description: GitHub Access Token
     required: false
     default: ${{ github.token }}
+outputs:
+  SHAREABLE_URL:
+    description: 'The public Nextcloud URL for the uploaded artifact'
 runs:
-  using: 'node20'
+  using: 'node24'
   main: 'dist/index.js'

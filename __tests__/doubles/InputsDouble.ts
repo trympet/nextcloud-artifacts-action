@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { Inputs } from '../../src/Inputs'
-import { NoFileOption } from '../../src/NoFileOption'
+import type { Inputs } from '../../src/Inputs.js'
+import { NoFileOption } from '../../src/NoFileOption.js'
 
 export class InputsDouble implements Inputs {
   get ArtifactName(): string {

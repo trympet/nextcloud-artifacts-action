@@ -1,13 +1,12 @@
-import * as fsSync from 'fs'
-import * as path from 'path'
+import * as fsSync from 'node:fs'
+import * as path from 'node:path'
 import * as core from '@actions/core'
-import * as os from 'os'
-import * as archiver from 'archiver'
-import fetch, { HeadersInit } from 'node-fetch'
-import btoa from 'btoa'
-import { v4 as uuidv4 } from 'uuid'
+import * as os from 'node:os'
+import { randomUUID } from 'node:crypto'
+import { pipeline } from 'node:stream/promises'
+import { ZipArchive } from 'archiver'
 import * as webdav from 'webdav'
-import { URL } from 'url'
+import type { URL } from 'node:url'
 
 const fs = fsSync.promises
 
@@ -18,7 +17,7 @@ interface FileSpec {
 
 export class NextcloudClient {
   private guid: string
-  private headers: HeadersInit
+  private headers: Record<string, string>
   private davClient
 
   constructor(
@@ -28,12 +27,11 @@ export class NextcloudClient {
     private username: string,
     private password: string
   ) {
-    this.guid = uuidv4()
+    this.guid = randomUUID()
     this.headers = { Authorization: 'Basic ' + Buffer.from(`${this.username}:${this.password}`).toString('base64') }
     this.davClient = webdav.createClient(`${this.endpoint.href}remote.php/dav/files/${this.username}`, {
       username: this.username,
-      password: this.password,
-      maxBodyLength: 1024 ** 3
+      password: this.password
     })
   }
 
@@ -110,17 +108,18 @@ export class NextcloudClient {
   }
 
   private async zip(dirpath: string, destpath: string) {
-    const archive = archiver.create('zip', { zlib: { level: 9 } })
-    const stream = archive.directory(dirpath, false).pipe(fsSync.createWriteStream(destpath))
-
-    await archive.finalize()
-
-    return await new Promise<void>((resolve, reject) => {
-      stream.on('error', e => reject(e)).on('close', () => resolve())
-    })
+    const archive = new ZipArchive({ zlib: { level: 9 } })
+    archive.on('warning', error => core.warning(error))
+    archive.directory(dirpath, false)
+    const completion = pipeline(archive, fsSync.createWriteStream(destpath))
+    await Promise.all([completion, archive.finalize()])
   }
 
   private async upload(file: string): Promise<string> {
+    if ((await fs.stat(file)).size > 1024 ** 3) {
+      throw new Error('Artifact exceeds the 1 GiB upload limit')
+    }
+
     const remoteFileDir = `/artifacts/${this.guid}`
     if (!(await this.davClient.exists(remoteFileDir))) {
       await this.davClient.createDirectory(remoteFileDir, { recursive: true })
@@ -145,14 +144,18 @@ export class NextcloudClient {
 
     const res = await fetch(url, {
       method: 'POST',
-      headers: Object.assign(this.headers, {
-        'OCS-APIRequest': true,
+      headers: {
+        ...this.headers,
+        'OCS-APIRequest': 'true',
         'Content-Type': 'application/json'
-      }),
+      },
       body: JSON.stringify(body)
     })
 
     const result = await res.text()
+    if (!res.ok) {
+      throw new Error(`Failed to create Nextcloud share: ${res.status} ${res.statusText}`)
+    }
     core.debug(`Share response: ${result}`)
     const re = /<url>(?<share_url>.*)<\/url>/
     const match = re.exec(result)
