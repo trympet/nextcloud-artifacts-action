@@ -31,6 +31,10 @@ export class InputsDouble implements Inputs {
     return process.env['TOKEN']!
   }
 
+  get NoZip(): boolean {
+    return process.env['NO_ZIP'] === 'true'
+  }
+
   get NoFileBehvaior(): NoFileOption {
     return NoFileOption.error
   }

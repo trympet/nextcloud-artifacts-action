@@ -25,7 +25,8 @@ export class NextcloudClient {
     private artifact: string,
     private rootDirectory: string,
     private username: string,
-    private password: string
+    private password: string,
+    private noZip = false
   ) {
     this.guid = randomUUID()
     this.headers = { Authorization: 'Basic ' + Buffer.from(`${this.username}:${this.password}`).toString('base64') }
@@ -38,15 +39,26 @@ export class NextcloudClient {
   async uploadFiles(files: string[]): Promise<string> {
     core.info('Preparing upload...')
     const spec = this.uploadSpec(files)
-    core.info('Zipping files...')
-    const zip = await this.zipFiles(spec)
+    let file: string
+    if (this.noZip) {
+      if (spec.length !== 1) {
+        throw new Error('The no-zip input requires exactly one matching file.')
+      }
+      file = spec[0].absolutePath
+    } else {
+      core.info('Zipping files...')
+      file = await this.zipFiles(spec)
+    }
+
     try {
       core.info('Uploading to Nextcloud...')
-      const filePath = await this.upload(zip)
+      const filePath = await this.upload(file)
       core.info(`Remote file path: ${filePath}`)
       return await this.shareFile(filePath)
     } finally {
-      await fs.unlink(zip)
+      if (!this.noZip) {
+        await fs.unlink(file)
+      }
     }
   }
 
@@ -116,8 +128,9 @@ export class NextcloudClient {
   }
 
   private async upload(file: string): Promise<string> {
-    if ((await fs.stat(file)).size > 1024 ** 3) {
-      throw new Error('Artifact exceeds the 1 GiB upload limit')
+    const stats = await fs.stat(file)
+    if (!stats.isFile()) {
+      throw new Error(`Upload source must be a regular file: ${file}`)
     }
 
     const remoteFileDir = `/artifacts/${this.guid}`
@@ -125,10 +138,17 @@ export class NextcloudClient {
       await this.davClient.createDirectory(remoteFileDir, { recursive: true })
     }
 
-    const remoteFilePath = `${remoteFileDir}/${this.artifact}.zip`
+    const remoteFilePath = `${remoteFileDir}/${this.artifact}${this.noZip ? '' : '.zip'}`
     core.debug(`Transferring file... (${file})`)
 
-    await this.davClient.putFileContents(remoteFilePath, await fs.readFile(file))
+    const stream = fsSync.createReadStream(file)
+    try {
+      await this.davClient.putFileContents(remoteFilePath, stream, {
+        headers: { 'Content-Length': String(stats.size) }
+      })
+    } finally {
+      await stream[Symbol.asyncDispose]()
+    }
 
     return remoteFilePath
   }

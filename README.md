@@ -13,7 +13,7 @@ The GitHub token needs `checks: write` to publish the artifact's check run. Stor
 Nextcloud credentials in repository or environment secrets, and use a Nextcloud app
 password where possible. The resulting share is public and read-only; only upload
 files intended to be shared publicly.
-The existing 1 GiB limit applies to the compressed ZIP archive.
+Uploads are streamed without an action-imposed size cap; server quotas and upload limits still apply.
 
 ## How it looks
 
@@ -63,9 +63,9 @@ to run untrusted pull-request code with secrets.
 
 ## Output
 
-`steps.artifact.outputs.SHAREABLE_URL` contains the public URL after a successful
-upload. No output is produced when there are no matching files. The
-`if-no-files-found` input accepts `warn` (default), `error`, or `ignore`.
+`SHAREABLE_URL` links to the share page; `DIRECT_SHAREABLE_URL` links to the download.
+Access them via `steps.artifact.outputs.<name>`. No matches produce no output;
+`if-no-files-found` accepts `warn` (default), `error`, or `ignore`.
 
 ## Development
 
@@ -93,4 +93,4 @@ The live integration test is opt-in: run `npm run test:integration` with
 `ARTIFACT_NAME`, `ARTIFACT_PATH`, `ENDPOINT`, `USERNAME`, `PASSWORD`, `TOKEN`,
 `GITHUB_REPOSITORY`, `GITHUB_SHA`, and `GITHUB_RUN_ID` set in the environment or an
 untracked `.env` file. It uploads to the configured Nextcloud server and creates a
-real GitHub check run.
+real GitHub check run (`NO_ZIP=true` enables uncompressed uploads).
