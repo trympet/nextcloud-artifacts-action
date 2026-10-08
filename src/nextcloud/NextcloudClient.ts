@@ -1,13 +1,12 @@
-import * as fsSync from 'fs'
-import * as path from 'path'
+import * as fsSync from 'node:fs'
+import * as path from 'node:path'
 import * as core from '@actions/core'
-import * as os from 'os'
-import * as archiver from 'archiver'
-import fetch, { HeadersInit } from 'node-fetch'
-import btoa from 'btoa'
-import { v4 as uuidv4 } from 'uuid'
+import * as os from 'node:os'
+import { randomUUID } from 'node:crypto'
+import { pipeline } from 'node:stream/promises'
+import { ZipArchive } from 'archiver'
 import * as webdav from 'webdav'
-import { URL } from 'url'
+import type { URL } from 'node:url'
 
 const fs = fsSync.promises
 
@@ -18,7 +17,7 @@ interface FileSpec {
 
 export class NextcloudClient {
   private guid: string
-  private headers: HeadersInit
+  private headers: Record<string, string>
   private davClient
 
   constructor(
@@ -26,29 +25,40 @@ export class NextcloudClient {
     private artifact: string,
     private rootDirectory: string,
     private username: string,
-    private password: string
+    private password: string,
+    private noZip = false
   ) {
-    this.guid = uuidv4()
+    this.guid = randomUUID()
     this.headers = { Authorization: 'Basic ' + Buffer.from(`${this.username}:${this.password}`).toString('base64') }
     this.davClient = webdav.createClient(`${this.endpoint.href}remote.php/dav/files/${this.username}`, {
       username: this.username,
-      password: this.password,
-      maxBodyLength: 1024 ** 3
+      password: this.password
     })
   }
 
   async uploadFiles(files: string[]): Promise<string> {
     core.info('Preparing upload...')
     const spec = this.uploadSpec(files)
-    core.info('Zipping files...')
-    const zip = await this.zipFiles(spec)
+    let file: string
+    if (this.noZip) {
+      if (spec.length !== 1) {
+        throw new Error('The no-zip input requires exactly one matching file.')
+      }
+      file = spec[0].absolutePath
+    } else {
+      core.info('Zipping files...')
+      file = await this.zipFiles(spec)
+    }
+
     try {
       core.info('Uploading to Nextcloud...')
-      const filePath = await this.upload(zip)
+      const filePath = await this.upload(file)
       core.info(`Remote file path: ${filePath}`)
       return await this.shareFile(filePath)
     } finally {
-      await fs.unlink(zip)
+      if (!this.noZip) {
+        await fs.unlink(file)
+      }
     }
   }
 
@@ -110,26 +120,35 @@ export class NextcloudClient {
   }
 
   private async zip(dirpath: string, destpath: string) {
-    const archive = archiver.create('zip', { zlib: { level: 9 } })
-    const stream = archive.directory(dirpath, false).pipe(fsSync.createWriteStream(destpath))
-
-    await archive.finalize()
-
-    return await new Promise<void>((resolve, reject) => {
-      stream.on('error', e => reject(e)).on('close', () => resolve())
-    })
+    const archive = new ZipArchive({ zlib: { level: 9 } })
+    archive.on('warning', error => core.warning(error))
+    archive.directory(dirpath, false)
+    const completion = pipeline(archive, fsSync.createWriteStream(destpath))
+    await Promise.all([completion, archive.finalize()])
   }
 
   private async upload(file: string): Promise<string> {
+    const stats = await fs.stat(file)
+    if (!stats.isFile()) {
+      throw new Error(`Upload source must be a regular file: ${file}`)
+    }
+
     const remoteFileDir = `/artifacts/${this.guid}`
     if (!(await this.davClient.exists(remoteFileDir))) {
       await this.davClient.createDirectory(remoteFileDir, { recursive: true })
     }
 
-    const remoteFilePath = `${remoteFileDir}/${this.artifact}.zip`
+    const remoteFilePath = `${remoteFileDir}/${this.artifact}${this.noZip ? '' : '.zip'}`
     core.debug(`Transferring file... (${file})`)
 
-    await this.davClient.putFileContents(remoteFilePath, await fs.readFile(file))
+    const stream = fsSync.createReadStream(file)
+    try {
+      await this.davClient.putFileContents(remoteFilePath, stream, {
+        headers: { 'Content-Length': String(stats.size) }
+      })
+    } finally {
+      await stream[Symbol.asyncDispose]()
+    }
 
     return remoteFilePath
   }
@@ -145,14 +164,18 @@ export class NextcloudClient {
 
     const res = await fetch(url, {
       method: 'POST',
-      headers: Object.assign(this.headers, {
-        'OCS-APIRequest': true,
+      headers: {
+        ...this.headers,
+        'OCS-APIRequest': 'true',
         'Content-Type': 'application/json'
-      }),
+      },
       body: JSON.stringify(body)
     })
 
     const result = await res.text()
+    if (!res.ok) {
+      throw new Error(`Failed to create Nextcloud share: ${res.status} ${res.statusText}`)
+    }
     core.debug(`Share response: ${result}`)
     const re = /<url>(?<share_url>.*)<\/url>/
     const match = re.exec(result)

@@ -1,20 +1,20 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import { GitHub } from '@actions/github/lib/utils'
 
-import { FileFinder } from '../FileFinder'
-import { Inputs } from '../Inputs'
-import { NextcloudClient } from './NextcloudClient'
-import { NoFileOption } from '../NoFileOption'
+import { FileFinder } from '../FileFinder.js'
+import type { Inputs } from '../Inputs.js'
+import { NextcloudClient } from './NextcloudClient.js'
+import { NoFileOption } from '../NoFileOption.js'
 
 export class NextcloudArtifact {
-  readonly octokit: InstanceType<typeof GitHub>
+  readonly octokit: ReturnType<typeof github.getOctokit>
   readonly context = NextcloudArtifact.getCheckRunContext()
   readonly token: string
   readonly name: string
   readonly artifactTitle: string
   readonly path: string
   readonly errorBehavior: NoFileOption
+  readonly noZip: boolean
 
   constructor(private inputs: Inputs) {
     this.token = inputs.Token
@@ -22,6 +22,7 @@ export class NextcloudArtifact {
     this.artifactTitle = `Nextcloud - ${this.name}`
     this.path = inputs.ArtifactPath
     this.errorBehavior = inputs.NoFileBehvaior
+    this.noZip = inputs.NoZip
     this.name = inputs.ArtifactName
     this.octokit = github.getOctokit(this.token)
   }
@@ -78,12 +79,16 @@ export class NextcloudArtifact {
       this.name,
       files.rootDirectory,
       this.inputs.Username,
-      this.inputs.Password
+      this.inputs.Password,
+      this.noZip
     )
 
     try {
       const shareableUrl = await client.uploadFiles(files.filesToUpload)
+      const directShareableUrl = new URL(shareableUrl)
+      directShareableUrl.pathname = `${directShareableUrl.pathname.replace(/\/+$/, '')}/download`
       core.setOutput('SHAREABLE_URL', shareableUrl)
+      core.setOutput('DIRECT_SHAREABLE_URL', directShareableUrl.toString())
       core.info(`Nextcloud shareable URL: ${shareableUrl}`)
       const resp = await this.octokit.rest.checks.update({
         check_run_id: createResp.data.id,
@@ -100,7 +105,7 @@ export class NextcloudArtifact {
       core.info(`Check run HTML: ${resp.data.html_url}`)
     } catch (error) {
       await this.trySetFailed(createResp.data.id)
-      core.setFailed(error)
+      throw error
     }
   }
 
@@ -118,7 +123,7 @@ export class NextcloudArtifact {
       })
       return true
     } catch (error) {
-      core.error(`Failed to update check status to failure`)
+      core.error(`Failed to update check status to failure: ${error instanceof Error ? error.message : String(error)}`)
       return false
     }
   }

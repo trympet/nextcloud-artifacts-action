@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { Inputs } from '../../src/Inputs'
-import { NoFileOption } from '../../src/NoFileOption'
+import type { Inputs } from '../../src/Inputs.js'
+import { NoFileOption } from '../../src/NoFileOption.js'
 
 export class InputsDouble implements Inputs {
   get ArtifactName(): string {
@@ -29,6 +29,10 @@ export class InputsDouble implements Inputs {
 
   get Token(): string {
     return process.env['TOKEN']!
+  }
+
+  get NoZip(): boolean {
+    return process.env['NO_ZIP'] === 'true'
   }
 
   get NoFileBehvaior(): NoFileOption {

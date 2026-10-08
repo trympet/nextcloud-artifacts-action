@@ -1,7 +1,7 @@
 name: 'Upload a Build Artifact to Nextcloud'
 description: 'Upload a build artifact to Nextcloud that can be used by subsequent workflow steps'
 author: 'Trym Lund Flogard'
-inputs: 
+inputs:
   name:
     description: 'Artifact name'
     default: 'artifact'
@@ -17,6 +17,10 @@ inputs:
   nextcloud-password:
     description: 'The password for the nextcloud user'
     required: true
+  no-zip:
+    description: 'Upload exactly one matching file without creating a ZIP; name is the remote filename'
+    required: false
+    default: 'false'
   if-no-files-found:
     description: >
       The desired behavior if no files are found using the provided path.
@@ -29,6 +33,11 @@ inputs:
     description: GitHub Access Token
     required: false
     default: ${{ github.token }}
+outputs:
+  SHAREABLE_URL:
+    description: 'The public Nextcloud URL for the uploaded artifact'
+  DIRECT_SHAREABLE_URL:
+    description: 'The public direct-download URL for the uploaded artifact'
 runs:
-  using: 'node20'
+  using: 'node24'
   main: 'dist/index.js'

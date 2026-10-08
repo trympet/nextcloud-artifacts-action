@@ -1,5 +1,5 @@
-import { URL } from 'url'
-import { NoFileOption } from './NoFileOption'
+import type { URL } from 'node:url'
+import type { NoFileOption } from './NoFileOption.js'
 
 export interface Inputs {
   readonly ArtifactName: string
@@ -13,6 +13,8 @@ export interface Inputs {
   readonly Password: string
 
   readonly Token: string
+
+  readonly NoZip: boolean
 
   readonly NoFileBehvaior: NoFileOption
 }

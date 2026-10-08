@@ -3,3 +3,4 @@ lib/
 node_modules/
 __tests__/__outputs__
 __tests__/__snapshots__
+workspace.code-workspace
