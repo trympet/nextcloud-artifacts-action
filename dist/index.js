@@ -84873,27 +84873,26 @@ class NextcloudClient {
     async uploadFiles(files) {
         lib_core/* info */.pq('Preparing upload...');
         const spec = this.uploadSpec(files);
-        let file;
-        if (this.noZip) {
-            if (spec.length !== 1) {
-                throw new Error('The no-zip input requires exactly one matching file.');
-            }
-            file = spec[0].absolutePath;
+        if (this.noZip && spec.length !== 1) {
+            throw new Error('The no-zip input requires exactly one matching file.');
         }
-        else {
-            lib_core/* info */.pq('Zipping files...');
-            file = await this.zipFiles(spec);
-        }
+        const tempDir = external_node_path_.join(external_node_os_namespaceObject.tmpdir(), this.guid);
         try {
+            let file;
+            if (this.noZip) {
+                file = spec[0].absolutePath;
+            }
+            else {
+                lib_core/* info */.pq('Zipping files...');
+                file = await this.zipFiles(spec, tempDir);
+            }
             lib_core/* info */.pq('Uploading to Nextcloud...');
             const filePath = await this.upload(file);
             lib_core/* info */.pq(`Remote file path: ${filePath}`);
             return await this.shareFile(filePath);
         }
         finally {
-            if (!this.noZip) {
-                await NextcloudClient_fs.unlink(file);
-            }
+            await NextcloudClient_fs.rm(tempDir, { recursive: true, force: true });
         }
     }
     uploadSpec(files) {
@@ -84928,8 +84927,7 @@ class NextcloudClient {
         }
         return specifications;
     }
-    async zipFiles(specs) {
-        const tempArtifactDir = external_node_path_.join(external_node_os_namespaceObject.tmpdir(), this.guid);
+    async zipFiles(specs, tempArtifactDir) {
         const artifactPath = external_node_path_.join(tempArtifactDir, `artifact-${this.artifact}`);
         await NextcloudClient_fs.mkdir(external_node_path_.join(artifactPath, this.artifact), { recursive: true });
         const copies = [];
