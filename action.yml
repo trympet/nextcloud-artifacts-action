@@ -8,6 +8,10 @@ inputs:
   path:
     description: 'A file, directory or wildcard pattern that describes what to upload'
     required: true
+  directory:
+    description: 'Destination directory within the Nextcloud account; each upload gets a unique subdirectory'
+    required: false
+    default: '/artifacts/'
   nextcloud-url:
     description: 'The URL for the nextcloud server'
     required: true

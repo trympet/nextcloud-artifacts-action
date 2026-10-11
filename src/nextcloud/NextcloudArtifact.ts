@@ -80,7 +80,8 @@ export class NextcloudArtifact {
       files.rootDirectory,
       this.inputs.Username,
       this.inputs.Password,
-      this.noZip
+      this.noZip,
+      this.inputs.Directory
     )
 
     try {
