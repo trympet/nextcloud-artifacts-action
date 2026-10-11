@@ -11,6 +11,10 @@ export class InputsDouble implements Inputs {
     return process.env['ARTIFACT_PATH']!
   }
 
+  get Directory(): string {
+    return process.env['DIRECTORY'] || '/artifacts/'
+  }
+
   get Retention(): string {
     return ''
   }

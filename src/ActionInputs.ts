@@ -12,6 +12,10 @@ export class ActionInputs implements Inputs {
     return core.getInput('path', { required: true })
   }
 
+  get Directory(): string {
+    return core.getInput('directory', { required: false }) || '/artifacts/'
+  }
+
   get Endpoint(): URL {
     return new URL(core.getInput('nextcloud-url', { required: true }))
   }

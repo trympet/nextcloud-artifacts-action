@@ -60,6 +60,35 @@ describe('streaming uploads', () => {
     }
   )
 
+  it.each([
+    { remoteDirectory: '/artifacts/', expectedParent: '/artifacts', noZip: false },
+    { remoteDirectory: '/ci/tests', expectedParent: '/ci/tests', noZip: false },
+    { remoteDirectory: '/ci/tests/', expectedParent: '/ci/tests', noZip: true },
+    { remoteDirectory: 'ci/tests/', expectedParent: '/ci/tests', noZip: false },
+    { remoteDirectory: '/ci artifacts/', expectedParent: '/ci artifacts', noZip: false },
+    { remoteDirectory: '/', expectedParent: '', noZip: false }
+  ])('uploads under "$remoteDirectory" with noZip=$noZip', async ({ remoteDirectory, expectedParent, noZip }) => {
+    davClient.exists.mockResolvedValueOnce(false)
+    const client = new NextcloudClient(
+      new URL('https://nextcloud.example/'),
+      'artifact',
+      directory,
+      'user',
+      'password',
+      noZip,
+      remoteDirectory
+    )
+    const remoteFileDir = `${expectedParent}/${client['guid']}`
+    const remoteFilePath = `${remoteFileDir}/artifact${noZip ? '' : '.zip'}`
+
+    await expect(client['upload'](file)).resolves.toBe(remoteFilePath)
+    expect(davClient.exists).toHaveBeenCalledWith(remoteFileDir)
+    expect(davClient.createDirectory).toHaveBeenCalledWith(remoteFileDir, { recursive: true })
+    expect(davClient.putFileContents).toHaveBeenCalledWith(remoteFilePath, expect.any(ReadStream), {
+      headers: { 'Content-Length': String((await fs.stat(file)).size) }
+    })
+  })
+
   it('closes an unconsumed stream when the remote upload fails', async () => {
     davClient.putFileContents.mockRejectedValueOnce(new Error('Upload rejected'))
     const client = new NextcloudClient(new URL('https://nextcloud.example/'), 'artifact', directory, 'user', 'password')

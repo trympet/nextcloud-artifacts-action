@@ -51,6 +51,7 @@ jobs:
         with:
           name: 'my-artifact'
           path: 'bin/**/*.exe'
+          directory: '/artifacts/tests/'
           nextcloud-url: 'https://nextcloud.example.com'
           nextcloud-username: ${{ secrets.NEXTCLOUD_USERNAME }}
           nextcloud-password: ${{ secrets.NEXTCLOUD_PASSWORD }}
@@ -93,4 +94,5 @@ The live integration test is opt-in: run `npm run test:integration` with
 `ARTIFACT_NAME`, `ARTIFACT_PATH`, `ENDPOINT`, `USERNAME`, `PASSWORD`, `TOKEN`,
 `GITHUB_REPOSITORY`, `GITHUB_SHA`, and `GITHUB_RUN_ID` set in the environment or an
 untracked `.env` file. It uploads to the configured Nextcloud server and creates a
-real GitHub check run (`NO_ZIP=true` enables uncompressed uploads).
+real GitHub check run (`NO_ZIP=true` enables uncompressed uploads, and `DIRECTORY`
+overrides the default Nextcloud upload directory).

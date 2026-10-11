@@ -26,7 +26,8 @@ export class NextcloudClient {
     private rootDirectory: string,
     private username: string,
     private password: string,
-    private noZip = false
+    private noZip = false,
+    private directory = '/artifacts/'
   ) {
     this.guid = randomUUID()
     this.headers = { Authorization: 'Basic ' + Buffer.from(`${this.username}:${this.password}`).toString('base64') }
@@ -132,7 +133,7 @@ export class NextcloudClient {
       throw new Error(`Upload source must be a regular file: ${file}`)
     }
 
-    const remoteFileDir = `/artifacts/${this.guid}`
+    const remoteFileDir = path.posix.join('/', this.directory, this.guid)
     if (!(await this.davClient.exists(remoteFileDir))) {
       await this.davClient.createDirectory(remoteFileDir, { recursive: true })
     }

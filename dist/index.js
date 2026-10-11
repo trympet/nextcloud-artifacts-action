@@ -57226,6 +57226,9 @@ class ActionInputs {
     get ArtifactPath() {
         return _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .getInput */ .V4('path', { required: true });
     }
+    get Directory() {
+        return _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .getInput */ .V4('directory', { required: false }) || '/artifacts/';
+    }
     get Endpoint() {
         return new node_url__WEBPACK_IMPORTED_MODULE_2__.URL(_actions_core__WEBPACK_IMPORTED_MODULE_0__/* .getInput */ .V4('nextcloud-url', { required: true }));
     }
@@ -84853,16 +84856,18 @@ class NextcloudClient {
     username;
     password;
     noZip;
+    directory;
     guid;
     headers;
     davClient;
-    constructor(endpoint, artifact, rootDirectory, username, password, noZip = false) {
+    constructor(endpoint, artifact, rootDirectory, username, password, noZip = false, directory = '/artifacts/') {
         this.endpoint = endpoint;
         this.artifact = artifact;
         this.rootDirectory = rootDirectory;
         this.username = username;
         this.password = password;
         this.noZip = noZip;
+        this.directory = directory;
         this.guid = (0,external_node_crypto_.randomUUID)();
         this.headers = { Authorization: 'Basic ' + Buffer.from(`${this.username}:${this.password}`).toString('base64') };
         this.davClient = createClient(`${this.endpoint.href}remote.php/dav/files/${this.username}`, {
@@ -84957,7 +84962,7 @@ class NextcloudClient {
         if (!stats.isFile()) {
             throw new Error(`Upload source must be a regular file: ${file}`);
         }
-        const remoteFileDir = `/artifacts/${this.guid}`;
+        const remoteFileDir = external_node_path_.posix.join('/', this.directory, this.guid);
         if (!(await this.davClient.exists(remoteFileDir))) {
             await this.davClient.createDirectory(remoteFileDir, { recursive: true });
         }
@@ -85078,7 +85083,7 @@ class NextcloudArtifact {
             },
             ...github_context.repo
         });
-        const client = new NextcloudClient(this.inputs.Endpoint, this.name, files.rootDirectory, this.inputs.Username, this.inputs.Password, this.noZip);
+        const client = new NextcloudClient(this.inputs.Endpoint, this.name, files.rootDirectory, this.inputs.Username, this.inputs.Password, this.noZip, this.inputs.Directory);
         try {
             const shareableUrl = await client.uploadFiles(files.filesToUpload);
             const directShareableUrl = new URL(shareableUrl);
