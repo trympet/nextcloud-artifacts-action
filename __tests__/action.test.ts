@@ -207,6 +207,40 @@ describe('compiled action on Node.js 24', () => {
     ).toEqual([expect.objectContaining({ conclusion: 'success', status: 'completed' })])
   })
 
+  it.each([
+    { remoteDirectory: '/builds/tests', expectedParent: '/builds/tests', noZip: 'false' },
+    { remoteDirectory: '/builds/tests/', expectedParent: '/builds/tests', noZip: 'true' },
+    { remoteDirectory: 'builds/tests/', expectedParent: '/builds/tests', noZip: 'false' },
+    { remoteDirectory: '/build artifacts/tests/', expectedParent: '/build artifacts/tests', noZip: 'false' },
+    { remoteDirectory: '/', expectedParent: '/', noZip: 'false' },
+    { remoteDirectory: '', expectedParent: '/artifacts', noZip: 'false' }
+  ])('uses directory "$remoteDirectory" with no-zip: $noZip', async ({ remoteDirectory, expectedParent, noZip }) => {
+    const result = await runAction({
+      path: path.join(fixtures, 'a.txt'),
+      directory: remoteDirectory,
+      'no-zip': noZip
+    })
+    expect(result).toMatchObject({ code: 0, stderr: '' })
+    const upload = requests.find(request => request.method === 'PUT')
+    const share = requests.find(request => request.url === '/ocs/v2.php/apps/files_sharing/api/v1/shares')
+    if (!upload?.url || !share) {
+      throw new Error('Expected both a WebDAV upload and a share request')
+    }
+    const remoteFilePath = decodeURIComponent(upload.url.replace('/remote.php/dav/files/test-user', ''))
+    const remoteFileDir = path.posix.dirname(remoteFilePath)
+    expect(path.posix.dirname(remoteFileDir)).toBe(expectedParent)
+    expect(path.posix.basename(remoteFileDir)).toMatch(/^[0-9a-f-]{36}$/)
+    expect(path.posix.basename(remoteFilePath)).toBe(`test-artifact${noZip === 'true' ? '' : '.zip'}`)
+    expect(
+      requests.some(
+        request =>
+          request.method === 'MKCOL' &&
+          decodeURIComponent(request.url ?? '') === `/remote.php/dav/files/test-user${remoteFileDir}/`
+      )
+    ).toBe(true)
+    expect(JSON.parse(share.body.toString())).toMatchObject({ path: remoteFilePath })
+  })
+
   it.each(['false', 'False', 'FALSE'])('keeps ZIP uploads enabled for no-zip: %s', async noZip => {
     const result = await runAction({ 'no-zip': noZip })
     expect(result).toMatchObject({ code: 0, stderr: '' })

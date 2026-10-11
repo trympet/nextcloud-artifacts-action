@@ -6,6 +6,8 @@ export interface Inputs {
 
   readonly ArtifactPath: string
 
+  readonly Directory: string
+
   readonly Endpoint: URL
 
   readonly Username: string
